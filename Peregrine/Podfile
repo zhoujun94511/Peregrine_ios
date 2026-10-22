@@ -1,0 +1,25 @@
+platform :ios, '12.0'
+
+project 'Peregrine.xcodeproj'
+
+target 'PeregrineRunner' do
+  pod 'peregrine', :path => "./", :subspecs => [
+    'peregrine-runner'
+  ]
+end
+
+target 'peregrine_stub' do
+  pod "GCDWebServer", "~> 3.0"
+  pod "peregrine-stub", :path => "./"
+end
+
+# GCDWebServer declares iOS 8; current Xcode builds nothing below iOS 12.
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 12.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+      end
+    end
+  end
+end

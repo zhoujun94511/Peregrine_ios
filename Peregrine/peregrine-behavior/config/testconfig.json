@@ -1,0 +1,12 @@
+{
+    "SkipCheckBlock": false,
+    "SkipRestart": false,
+    "SkipHome": false,
+    "GestureRatio": {
+        "SWIPE": 0.10,
+        "LONG_PRESS": 0.06,
+        "DOUBLE_TAP": 0.03,
+        "PINCH": 0.02,
+        "DRAG": 0.02
+    }
+}

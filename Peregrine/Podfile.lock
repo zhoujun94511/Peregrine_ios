@@ -1,0 +1,33 @@
+PODS:
+  - GCDWebServer (3.5.4):
+    - GCDWebServer/Core (= 3.5.4)
+  - GCDWebServer/Core (3.5.4)
+  - peregrine-stub (0.2.0):
+    - GCDWebServer (~> 3.0)
+  - peregrine/peregrine-behavior (0.2.0)
+  - peregrine/peregrine-runner (0.2.0):
+    - peregrine/peregrine-behavior
+
+DEPENDENCIES:
+  - GCDWebServer (~> 3.0)
+  - peregrine-stub (from `./`)
+  - peregrine/peregrine-runner (from `./`)
+
+SPEC REPOS:
+  trunk:
+    - GCDWebServer
+
+EXTERNAL SOURCES:
+  peregrine:
+    :path: "./"
+  peregrine-stub:
+    :path: "./"
+
+SPEC CHECKSUMS:
+  GCDWebServer: 2c156a56c8226e2d5c0c3f208a3621ccffbe3ce4
+  peregrine: 83b0627828457f72469f3b5dcb5e702f4394e308
+  peregrine-stub: 82543b7ca84cf234d20a86145e49ec10df79edc5
+
+PODFILE CHECKSUM: 6bf74efd46b989acb5e104487447038cef91d24b
+
+COCOAPODS: 1.17.0

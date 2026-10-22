@@ -1,0 +1,6 @@
+# 启动页与命令行（server.py / cli.py）只使用 Python 标准库，不依赖本文件。
+# 本文件只给电脑端资源采样用（启动页「资源采样」或 cli.py run --perf）。
+# 首次开启采样时，会在 tools/launch/.run/tools/pymobiledevice3-<版本>/ 建独立虚拟环境并按本文件安装。
+# 也可预先执行：python3 -m pip install -r tools/requirements.txt
+# 需要 Python 3.9 及以上。go-ios 与 wintun 不是 pip 包，由 core.py 按平台下载并校验 SHA-256。
+pymobiledevice3==11.42.0

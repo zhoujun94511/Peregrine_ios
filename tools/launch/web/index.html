@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Peregrine</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/launch.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <img class="mark" src="/favicon.svg" alt="">
+      <div>
+        <strong>Peregrine</strong>
+        <span class="sub">本地启动</span>
+      </div>
+    </div>
+    <p class="live" id="device-meta">未连接设备</p>
+  </header>
+
+  <div class="workspace">
+    <form class="setup" id="launch-form" action="#" method="post">
+      <h2>这一轮</h2>
+      <label class="field">
+        <span class="name">设备</span>
+        <select id="device" aria-describedby="device-error"></select>
+        <span class="field-error" id="device-error"></span>
+      </label>
+      <label class="field">
+        <span class="name">Bundle ID</span>
+        <span class="bundle-line">
+          <select id="bundle" aria-describedby="bundle-error"></select>
+          <button id="refresh" type="button">刷新</button>
+        </span>
+        <span class="field-error" id="bundle-error"></span>
+      </label>
+      <div class="pair">
+        <label class="field">
+          <span class="name">时长</span>
+          <span class="with-unit">
+            <input id="duration" type="number" min="1" max="10080" step="1" inputmode="numeric" autocomplete="off" value="1" aria-describedby="duration-error">
+            <span class="unit">min</span>
+          </span>
+          <span class="field-error" id="duration-error"></span>
+        </label>
+        <label class="field">
+          <span class="name">节流</span>
+          <span class="with-unit">
+            <input id="throttle" type="number" min="1" max="60000" step="1" inputmode="numeric" autocomplete="off" value="300" aria-describedby="throttle-error">
+            <span class="unit">ms</span>
+          </span>
+          <span class="field-error" id="throttle-error"></span>
+        </label>
+      </div>
+      <label class="field">
+        <span class="name">数据端口</span>
+        <span class="with-unit">
+          <input id="dataport" type="number" min="0" max="65535" step="1" inputmode="numeric" autocomplete="off" placeholder="留空不用 stub" aria-describedby="dataport-error dataport-note">
+          <button id="stub-check" type="button" title="在手机上启动被测应用，确认它接入了插桩并在这个端口应答">检测</button>
+        </span>
+        <span class="field-error" id="dataport-error"></span>
+        <span class="field-note" id="dataport-note"></span>
+      </label>
+      <label class="field">
+        <span class="name">步骤截图</span>
+        <select id="shots" aria-describedby="shots-error" title="截图上标出候选块和点击目标，随结果一起导出，用于排查问题">
+          <option value="off">不保存</option>
+          <option value="change">画面变化时保存</option>
+          <option value="all">每步都保存</option>
+        </select>
+        <span class="field-error" id="shots-error"></span>
+      </label>
+      <label class="field">
+        <span class="name">资源采样</span>
+        <select id="perf" title="电脑端每秒采一次被测应用的内存、CPU、线程数、磁盘读写、文件与端口数、唤醒次数和屏幕帧率，并记录前后台切换；插桩模式下另外每步向插桩读一次内存、CPU、主线程卡顿、内存警告和设备温度。结果和采样报告随设备结果一起导出">
+          <option value="off">不采集</option>
+          <option value="on">采集内存、CPU、帧率</option>
+        </select>
+      </label>
+      <div class="actions">
+        <button id="start" type="submit">开始</button>
+        <button id="stop" type="button" disabled>终止</button>
+      </div>
+      <div class="actions">
+        <button id="check" type="button" title="运行 testPingNetwork：本机回环、命令端口；填了数据端口时再检查插桩">通信检查</button>
+      </div>
+      <p class="hint">终止只停这一轮。关掉页面不会停。通信检查只用所选目标。已启动的模拟器只跑探索逻辑：电脑端不采帧率、不拉系统崩溃日志，插桩由 Runner 自行探测。</p>
+    </form>
+
+    <section class="console" aria-label="运行输出">
+      <div class="status-row idle" id="status-row">
+        <span class="dot" aria-hidden="true"></span>
+        <p id="status">等待开始</p>
+        <div class="log-actions">
+          <button id="copy-log" type="button" disabled>复制</button>
+          <button id="export-log" type="button" disabled title="只下载控制台日志">导出日志</button>
+          <button id="export-run" type="button" disabled title="日志、xcresult、崩溃报告和设备上的结果文件打成一个 zip">打包导出</button>
+        </div>
+      </div>
+      <div class="log-pane">
+        <p class="empty-note" id="empty-note">选好设备和 Bundle ID，点开始后，测试输出会出现在这里。</p>
+        <pre id="log"></pre>
+      </div>
+    </section>
+  </div>
+  <script src="/launch.js"></script>
+</body>
+</html>

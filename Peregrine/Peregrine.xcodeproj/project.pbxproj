@@ -1,0 +1,537 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 51;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4473C73D266CD9FD00843097 /* PeregrineRunner.m in Sources */ = {isa = PBXBuildFile; fileRef = 4473C73C266CD9FD00843097 /* PeregrineRunner.m */; };
+		A8089DF75B42ABC48CA6D17F /* libPods-peregrine_stub.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B0B358089D0512B5E919C751 /* libPods-peregrine_stub.a */; };
+		DFABA2CB18DD202073C1FC70 /* libPods-PeregrineRunner.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C8120BE978C58C7840BC5A3A /* libPods-PeregrineRunner.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1A8F1CAE9FAB125F3EAAC3BE /* Pods-peregrine_stub.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-peregrine_stub.debug.xcconfig"; path = "Target Support Files/Pods-peregrine_stub/Pods-peregrine_stub.debug.xcconfig"; sourceTree = "<group>"; };
+		3347B4BEFD0387FFF399ABAF /* Pods-peregrine_stub.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-peregrine_stub.release.xcconfig"; path = "Target Support Files/Pods-peregrine_stub/Pods-peregrine_stub.release.xcconfig"; sourceTree = "<group>"; };
+		4459C8A62698521000E7989A /* peregrine_stub.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = peregrine_stub.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4473C73A266CD9FD00843097 /* PeregrineRunner.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PeregrineRunner.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4473C73C266CD9FD00843097 /* PeregrineRunner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PeregrineRunner.m; sourceTree = "<group>"; };
+		4473C73E266CD9FD00843097 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		75D7C3CD602D6B0DEA8716F7 /* Pods-PeregrineRunner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PeregrineRunner.release.xcconfig"; path = "Target Support Files/Pods-PeregrineRunner/Pods-PeregrineRunner.release.xcconfig"; sourceTree = "<group>"; };
+		B0B358089D0512B5E919C751 /* libPods-peregrine_stub.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-peregrine_stub.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C8120BE978C58C7840BC5A3A /* libPods-PeregrineRunner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PeregrineRunner.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F58BDF740880FDD96BB37D7F /* Pods-PeregrineRunner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PeregrineRunner.debug.xcconfig"; path = "Target Support Files/Pods-PeregrineRunner/Pods-PeregrineRunner.debug.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4459C8A32698521000E7989A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8089DF75B42ABC48CA6D17F /* libPods-peregrine_stub.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4473C737266CD9FD00843097 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DFABA2CB18DD202073C1FC70 /* libPods-PeregrineRunner.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4473C6F2266CD93400843097 = {
+			isa = PBXGroup;
+			children = (
+				4473C73B266CD9FD00843097 /* PeregrineRunner */,
+				4473C6FC266CD93400843097 /* Products */,
+				FDEA23DB12DEB8FAA915971E /* Pods */,
+				F9D10CB8E8FAF5B9368126DC /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		4473C6FC266CD93400843097 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4473C73A266CD9FD00843097 /* PeregrineRunner.xctest */,
+				4459C8A62698521000E7989A /* peregrine_stub.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4473C73B266CD9FD00843097 /* PeregrineRunner */ = {
+			isa = PBXGroup;
+			children = (
+				4473C73C266CD9FD00843097 /* PeregrineRunner.m */,
+				4473C73E266CD9FD00843097 /* Info.plist */,
+			);
+			path = PeregrineRunner;
+			sourceTree = "<group>";
+		};
+		F9D10CB8E8FAF5B9368126DC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C8120BE978C58C7840BC5A3A /* libPods-PeregrineRunner.a */,
+				B0B358089D0512B5E919C751 /* libPods-peregrine_stub.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FDEA23DB12DEB8FAA915971E /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				F58BDF740880FDD96BB37D7F /* Pods-PeregrineRunner.debug.xcconfig */,
+				75D7C3CD602D6B0DEA8716F7 /* Pods-PeregrineRunner.release.xcconfig */,
+				1A8F1CAE9FAB125F3EAAC3BE /* Pods-peregrine_stub.debug.xcconfig */,
+				3347B4BEFD0387FFF399ABAF /* Pods-peregrine_stub.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		4459C8A12698521000E7989A /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		4459C8A52698521000E7989A /* peregrine_stub */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4459C8AA2698521000E7989A /* Build configuration list for PBXNativeTarget "peregrine_stub" */;
+			buildPhases = (
+				CD692F28F803D3FAEEACED05 /* [CP] Check Pods Manifest.lock */,
+				4459C8A12698521000E7989A /* Headers */,
+				4459C8A22698521000E7989A /* Sources */,
+				4459C8A32698521000E7989A /* Frameworks */,
+				4459C8A42698521000E7989A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = peregrine_stub;
+			productName = peregrine_stub;
+			productReference = 4459C8A62698521000E7989A /* peregrine_stub.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		4473C739266CD9FD00843097 /* PeregrineRunner */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4473C73F266CD9FD00843097 /* Build configuration list for PBXNativeTarget "PeregrineRunner" */;
+			buildPhases = (
+				8977B2BF37730667834BC0C6 /* [CP] Check Pods Manifest.lock */,
+				4473C736266CD9FD00843097 /* Sources */,
+				4473C737266CD9FD00843097 /* Frameworks */,
+				4473C738266CD9FD00843097 /* Resources */,
+				221FF749DFD9543E40C8221B /* [CP] Copy Pods Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PeregrineRunner;
+			productName = PeregrineRunner;
+			productReference = 4473C73A266CD9FD00843097 /* PeregrineRunner.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4473C6F3266CD93400843097 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1220;
+				TargetAttributes = {
+					4459C8A52698521000E7989A = {
+						CreatedOnToolsVersion = 13.0;
+					};
+					4473C739266CD9FD00843097 = {
+						CreatedOnToolsVersion = 12.2;
+					};
+				};
+			};
+			buildConfigurationList = 4473C6F6266CD93400843097 /* Build configuration list for PBXProject "Peregrine" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4473C6F2266CD93400843097;
+			productRefGroup = 4473C6FC266CD93400843097 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4473C739266CD9FD00843097 /* PeregrineRunner */,
+				4459C8A52698521000E7989A /* peregrine_stub */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4459C8A42698521000E7989A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4473C738266CD9FD00843097 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		221FF749DFD9543E40C8221B /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-PeregrineRunner/Pods-PeregrineRunner-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-PeregrineRunner/Pods-PeregrineRunner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-PeregrineRunner/Pods-PeregrineRunner-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		8977B2BF37730667834BC0C6 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-PeregrineRunner-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		CD692F28F803D3FAEEACED05 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-peregrine_stub-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4459C8A22698521000E7989A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4473C736266CD9FD00843097 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4473C73D266CD9FD00843097 /* PeregrineRunner.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4459C8AB2698521000E7989A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1A8F1CAE9FAB125F3EAAC3BE /* Pods-peregrine_stub.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eternalengine.stub;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		4459C8AC2698521000E7989A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3347B4BEFD0387FFF399ABAF /* Pods-peregrine_stub.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eternalengine.stub;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		4473C728266CD93C00843097 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		4473C729266CD93C00843097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		4473C740266CD9FD00843097 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F58BDF740880FDD96BB37D7F /* Pods-PeregrineRunner.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				EXCLUDED_ARCHS = i386;
+				INFOPLIST_FILE = PeregrineRunner/Info.plist;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Peregrine 需要确认这台测试机可以访问网络。";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.eternalengine.PeregrineRunner;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4473C741266CD9FD00843097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 75D7C3CD602D6B0DEA8716F7 /* Pods-PeregrineRunner.release.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				EXCLUDED_ARCHS = i386;
+				INFOPLIST_FILE = PeregrineRunner/Info.plist;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Peregrine 需要确认这台测试机可以访问网络。";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.eternalengine.PeregrineRunner;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4459C8AA2698521000E7989A /* Build configuration list for PBXNativeTarget "peregrine_stub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4459C8AB2698521000E7989A /* Debug */,
+				4459C8AC2698521000E7989A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4473C6F6266CD93400843097 /* Build configuration list for PBXProject "Peregrine" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4473C728266CD93C00843097 /* Debug */,
+				4473C729266CD93C00843097 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4473C73F266CD9FD00843097 /* Build configuration list for PBXNativeTarget "PeregrineRunner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4473C740266CD9FD00843097 /* Debug */,
+				4473C741266CD9FD00843097 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4473C6F3266CD93400843097 /* Project object */;
+}

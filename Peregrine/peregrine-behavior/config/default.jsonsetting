@@ -1,0 +1,46 @@
+{
+  "version": 1.0,
+  "events": [
+    {
+      "type": "event",
+      "name": "eventbase",
+      "require": [],
+      "exclude": [],
+      "actions": [],
+      "roi": [],
+      "rate": 1.0
+    }
+  ],
+  "actions": [
+    {
+      "type": "xaction",
+      "name": "restart",
+      "cmd": "RESTART",
+      "duration": 1.0
+    },
+    {
+      "type": "xaction",
+      "name": "terminate",
+      "cmd": "TERMINATE",
+      "duration": 1.0
+    },
+    {
+      "type": "xaction",
+      "name": "start",
+      "cmd": "START",
+      "duration": 1.0
+    },
+    {
+      "type": "xaction",
+      "name": "home",
+      "cmd": "HOME",
+      "duration": 1.0
+    },
+    {
+      "type": "xaction",
+      "name": "back",
+      "cmd": "BACK",
+      "duration": 1.0
+    }
+  ]
+}

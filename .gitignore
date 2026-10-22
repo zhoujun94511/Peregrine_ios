@@ -1,0 +1,51 @@
+decompiled/
+
+# CocoaPods
+Peregrine/Pods/
+
+# Xcode user state and derived artifacts
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xcresult
+*.moved-aside
+*.hmap
+Peregrine/build/
+
+# Launch logs. tunnel.log and install-*.log only. Deleting this does not drop downloads.
+tools/launch/.run/
+
+# Downloaded dependencies and per-run results. Do not upload.
+#   .local/tools/       go-ios, wintun.dll, Mac pymobiledevice3 venv
+#   .local/devimages/   developer disk images from ios image auto
+#   .local/rounds/      one directory per run: log, device/, crash/, xcresult, zip
+#   .local/build/       Mac install derived data
+#   .local/state.json   launch page prefs
+tools/launch/.local/
+
+# Windows host venv. pymobiledevice3 is installed here on first --perf.
+.venv/
+
+tools/launch/__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+*.swp
+*~
+
+# Local device identity. Contains a private key.
+selfIdentity.plist
+
+# One-off device logs from the wifi_denied investigation.
+Doc/probe-logs/
+
+# Local working notes. Stay on disk for lookup, not part of the published tree.
+Doc/项目结构说明.md
+
+# Local editor config
+.cursor/
+.idea/
+
+# Xcode writes this inside the project. The shared workspace is Peregrine.xcworkspace.
+Peregrine/Peregrine.xcodeproj/project.xcworkspace/
