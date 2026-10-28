@@ -134,7 +134,7 @@ Peregrine 将依赖 iOS 测试运行环境的操作执行层，与负责探索�
 │   │   ├── models.py               go-ios 方式下 iPhone 型号标识（如 iPhone16,2）到市场型号的对照
 │   │   ├── perf.py                 电脑端资源采样与采样报告
 │   │   ├── runtest.py              经 go-ios 运行手机上已安装的 Runner，并转出 Runner 日志
-│   │   └── web/                    启动页前端：index.html、launch.css、launch.js 与站点图标
+│   │   └── web/                    启动页前端：index.html、launch.css、launch.js；站点图标在 web/pic/
 │   └── crash/collect.py            崩溃日志收集与报告
 └── Peregrine/
     ├── Peregrine.xcworkspace       Xcode 工作区，包含 Peregrine 与 Pods 工程

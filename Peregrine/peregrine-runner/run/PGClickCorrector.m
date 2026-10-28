@@ -43,6 +43,7 @@ static const NSInteger PGSnapshotCorrectCooldownSteps = 5;
         _cooldown = PGSnapshotCorrectCooldownSteps;
         return result;
     }
+    result.inspected = YES;
     NSString *pageName = snapshot.pageName;
     BOOL outside = snapshot.outside;
     NSArray<PGElementNode *> *snapshotNodes = snapshot.nodes;
@@ -64,6 +65,7 @@ static const NSInteger PGSnapshotCorrectCooldownSteps = 5;
     if(snapshotNodes.count == 0)
     {
         NSLog(@"snapshot correct miss empty elapsed %ld", (long)elapsed);
+        result.operate = [[PGOperate alloc] init];
         return result;
     }
     PGElementNode *control = [PGSnapshotTree controlCoveringRect:operate.rect inNodes:snapshotNodes];
@@ -76,7 +78,9 @@ static const NSInteger PGSnapshotCorrectCooldownSteps = 5;
     }
     else
     {
+        // The guessed point is not a control. Keep the snapshot tree and do not tap it.
         NSLog(@"snapshot correct miss no-control elapsed %ld", (long)elapsed);
+        result.operate = [[PGOperate alloc] init];
     }
     result.nodes = [PGSnapshotTree nodesByAddingHoles:[self tallHoles:pixelNodes pixelSize:pixelSize screenSize:screen.screenSize] toSnapshotNodes:snapshotNodes pixelSize:pixelSize screenSize:screen.screenSize];
     result.corrected = result.nodes.count > 0;

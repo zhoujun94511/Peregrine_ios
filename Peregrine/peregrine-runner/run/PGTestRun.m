@@ -83,6 +83,12 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
     }];
 }
 
+static void PGNoteOutside(PGExploreScore *score, PGStepScreen *screens, NSString *bundleID)
+{
+    NSString *activity = screens.activity.length > 0 ? screens.activity : @"foreground";
+    [score noteSource:@"outside" activity:activity fingerprint:screens.fingerprint operate:nil bundleID:bundleID];
+}
+
 @implementation PGTestRun
 
 + (void)runWithEnvironment:(NSDictionary *)environment testCase:(XCTestCase *)testCase
@@ -172,6 +178,7 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
     model.selector.inputTexts = PGInputTexts(environment);
     NSInteger actionTimeoutMillis = PGActionTimeoutMillis(environment);
     NSDate *taskStarted = [NSDate date];
+    [appWatch startPulse];
     [events recordEventType:@"task_start" fields:@{@"app_state": PGAppStateName(app.state), @"result": session.bundleID ?: @""}];
     PGStepScreen *screens = [[PGStepScreen alloc] init];
     screens.exclusion = [[PGElementExclusion alloc] initWithNames:config.excludeElements];
@@ -184,6 +191,21 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
     {
         @autoreleasepool
         {
+            [appWatch beat];
+            if([appWatch consumeSlowStep] && !config.skipRestart)
+            {
+                NSLog(@"run step slow restart");
+                [app terminate];
+                [app launch];
+                [appWatch noteInApplication];
+            }
+            else if([appWatch exploreIdle] && !config.skipRestart)
+            {
+                NSLog(@"run explore idle restart");
+                [app terminate];
+                [app launch];
+                [appWatch noteInApplication];
+            }
             NSURL *schemaURL = [applet URLToOpenOnce];
             if([PGOperatePlayer openURL:schemaURL application:app])
             {
@@ -195,29 +217,37 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
                 [NSThread sleepForTimeInterval:session.throttleMilliseconds / 1000.0];
                 continue;
             }
-            if([appWatch recoverApplication:app allowsRestart:!config.skipRestart])
+            PGForegroundWatch process = [appWatch considerProcess:app allowsRestart:!config.skipRestart];
+            if(process != PGForegroundWatchTarget)
             {
-                BOOL crashed = appWatch.lastState == XCUIApplicationStateNotRunning;
-                NSString *kind = @"left_foreground";
-                if(crashed && appWatch.lastRecovery == PGAppWatchRecoveryRestart)
+                if(process == PGForegroundWatchReturn)
                 {
-                    kind = @"suspected_crash_restart";
+                    BOOL crashed = appWatch.lastState == XCUIApplicationStateNotRunning;
+                    NSString *kind = @"left_foreground";
+                    if(crashed && appWatch.lastRecovery == PGAppWatchRecoveryRestart)
+                    {
+                        kind = @"suspected_crash_restart";
+                    }
+                    else if(crashed)
+                    {
+                        kind = @"suspected_crash";
+                    }
+                    else if(appWatch.lastRecovery == PGAppWatchRecoveryRestart)
+                    {
+                        kind = @"left_foreground_restart";
+                    }
+                    [events recordEventType:@"app_state_changed" fields:@{
+                        @"app_state": PGAppStateName(appWatch.lastState),
+                        @"result": kind
+                    }];
+                    NSLog(@"return app to foreground %@ %ld", kind, (long)appWatch.lastAttempt);
                 }
-                else if(crashed)
-                {
-                    kind = @"suspected_crash";
-                }
-                else if(appWatch.lastRecovery == PGAppWatchRecoveryRestart)
-                {
-                    kind = @"left_foreground_restart";
-                }
-                [events recordEventType:@"app_state_changed" fields:@{
-                    @"app_state": PGAppStateName(appWatch.lastState),
-                    @"result": kind
-                }];
-                NSLog(@"return app to foreground %@ %ld", kind, (long)appWatch.lastAttempt);
                 [NSThread sleepForTimeInterval:session.throttleMilliseconds / 1000.0];
                 continue;
+            }
+            if(!stubAlive && [appWatch coverHoldActive])
+            {
+                [screens discardTreeCache];
             }
             [screens captureInApplication:app stubAlive:stubAlive client:client port:session.dataPort snapshotMode:snapshotEnabled correctClicks:correctClicks segmentation:segmentation];
             PGStubTreeVerdict verdict = stubAlive ? [stubWatch noteTree:screens.rawTree] : PGStubTreeKeep;
@@ -232,6 +262,44 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
                 snapshotEnabled = sourceMode == PGSnapshotSourceModeSnapshot;
                 correctClicks = sourceMode == PGSnapshotSourceModeCombined;
                 [screens captureInApplication:app stubAlive:NO client:client port:session.dataPort snapshotMode:snapshotEnabled correctClicks:correctClicks segmentation:segmentation];
+            }
+            if(!stubAlive)
+            {
+                if(screens.hierarchyUnread)
+                {
+                    NSLog(@"foreground hierarchy unread");
+                }
+                BOOL readCover = screens.hierarchyInspected || screens.outside || screens.hierarchyUnread;
+                if(readCover)
+                {
+                    BOOL coveredNow = screens.outside || screens.hierarchyUnread;
+                    PGForegroundWatch covered = [appWatch considerCovered:coveredNow application:app allowsRestart:!config.skipRestart];
+                    if(covered != PGForegroundWatchTarget)
+                    {
+                        events.activity = screens.activity ?: @"";
+                        PGNoteOutside(score, screens, session.bundleID);
+                        if(covered == PGForegroundWatchReturn && appWatch.lastRecovery != PGAppWatchRecoveryRestart)
+                        {
+                            PGOperate *dismiss = [outsideGate dismissCoveringScreen:screens.screenSize];
+                            NSLog(@"foreground covered dismiss");
+                            [PGOperatePlayer traceOperate:dismiss nodes:@[] inApp:app cases:cases log:events timeoutMillis:actionTimeoutMillis resolveElement:NO screen:screens.screenSize];
+                        }
+                        else if(appWatch.lastRecovery == PGAppWatchRecoveryRestart)
+                        {
+                            NSLog(@"return app to foreground foreign_screen_restart %ld", (long)appWatch.lastAttempt);
+                        }
+                        [NSThread sleepForTimeInterval:session.throttleMilliseconds / 1000.0];
+                        continue;
+                    }
+                }
+                else if([appWatch coverHoldActive])
+                {
+                    events.activity = screens.activity ?: @"";
+                    PGNoteOutside(score, screens, session.bundleID);
+                    NSLog(@"foreground covered unreadable");
+                    [NSThread sleepForTimeInterval:session.throttleMilliseconds / 1000.0];
+                    continue;
+                }
             }
             if(screens.activity.length == 0)
             {
@@ -322,20 +390,29 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
                 operate = correction.operate;
                 if(correction.outside)
                 {
+                    [model discardLatestOperate];
                     [screens rememberOutsidePage:correction.pageName fingerprint:screens.fingerprint];
-                    PGOverlayDecision *leave = [outsideGate decisionForScreen:screens];
-                    if(leave.action == PGOverlayActionOperate && leave.operate.act.length > 0)
+                    screens.outside = YES;
+                    screens.source = @"snapshot-outside";
+                    PGForegroundWatch covered = [appWatch considerCovered:YES application:app allowsRestart:!config.skipRestart];
+                    events.activity = screens.activity ?: @"";
+                    PGNoteOutside(score, screens, session.bundleID);
+                    if(covered == PGForegroundWatchReturn && appWatch.lastRecovery != PGAppWatchRecoveryRestart)
                     {
-                        [score noteSource:screens.source activity:screens.activity fingerprint:screens.fingerprint operate:leave.operate bundleID:session.bundleID];
-                        [shots recordScreen:screens operate:leave.operate application:app];
-                        [PGOperatePlayer traceOperate:leave.operate nodes:screens.nodes inApp:app cases:cases log:events timeoutMillis:actionTimeoutMillis resolveElement:NO screen:screens.screenSize];
-                        [NSThread sleepForTimeInterval:session.throttleMilliseconds / 1000.0];
-                        continue;
+                        PGOperate *dismiss = [outsideGate dismissCoveringScreen:screens.screenSize];
+                        NSLog(@"foreground covered dismiss");
+                        [PGOperatePlayer traceOperate:dismiss nodes:@[] inApp:app cases:cases log:events timeoutMillis:actionTimeoutMillis resolveElement:NO screen:screens.screenSize];
                     }
-                    [score noteSource:screens.source activity:screens.activity fingerprint:screens.fingerprint operate:nil bundleID:session.bundleID];
-                    PGReturnToApp(appWatch, app, events, !config.skipRestart);
+                    else if(appWatch.lastRecovery == PGAppWatchRecoveryRestart)
+                    {
+                        NSLog(@"return app to foreground foreign_screen_restart %ld", (long)appWatch.lastAttempt);
+                    }
                     [NSThread sleepForTimeInterval:session.throttleMilliseconds / 1000.0];
                     continue;
+                }
+                if(correction.inspected)
+                {
+                    [appWatch considerCovered:NO application:app allowsRestart:!config.skipRestart];
                 }
                 if(correction.corrected)
                 {
@@ -344,6 +421,10 @@ static void PGReturnToApp(PGAppWatch *appWatch, XCUIApplication *app, PGEventLog
                 else if(!correction.slow)
                 {
                     [screens rememberCorrectionAttempted];
+                }
+                if(operate.act.length == 0)
+                {
+                    [model discardLatestOperate];
                 }
             }
             [score noteSource:screens.source activity:screens.activity fingerprint:screens.fingerprint operate:operate bundleID:session.bundleID];

@@ -74,9 +74,11 @@ static const NSInteger PGSnapshotNodeCap = 200;
     }
     NSError *error = nil;
     id<XCUIElementSnapshot> snapshot = [application snapshotWithError:&error];
+    // A nil snapshot is an unread hierarchy. An empty array would look like a screen with no sheet.
     if(snapshot == nil)
     {
-        return @[];
+        NSString *reason = error.localizedDescription.length > 0 ? error.localizedDescription : @"snapshot nil";
+        [NSException raise:NSGenericException format:@"%@", reason];
     }
     CGRect screen = snapshot.frame;
     if(screen.size.width < 2 || screen.size.height < 2)
@@ -113,7 +115,7 @@ static const NSInteger PGSnapshotNodeCap = 200;
     }
     if(outsideApp != nil)
     {
-        *outsideApp = outside || [self pageIsSystemScreen:page];
+        *outsideApp = outside;
     }
     return nodes;
 }
@@ -164,12 +166,13 @@ static const NSInteger PGSnapshotNodeCap = 200;
     }
     NSString *identifier = snapshot.identifier ?: @"";
     NSString *label = snapshot.label ?: @"";
-    if(!*outsideApp && ([self textContainsSystemPicker:identifier] || [self textContainsSystemPicker:label]))
+    XCUIElementType type = snapshot.elementType;
+    // A sheet this tall is covering the target. Its title is not what decides that.
+    if(!*outsideApp && type == XCUIElementTypeSheet && screen.size.height > 0 && snapshot.frame.size.height >= screen.size.height * 0.55)
     {
         *outsideApp = YES;
-        NSLog(@"snapshot outside marker identifier %@ label %@", identifier, label);
+        NSLog(@"foreground covered by sheet");
     }
-    XCUIElementType type = snapshot.elementType;
     if(type == XCUIElementTypeNavigationBar && (*pageName).length == 0)
     {
         *pageName = identifier.length > 0 ? identifier : (label.length > 0 ? label : nil);
@@ -305,35 +308,6 @@ static const NSInteger PGSnapshotNodeCap = 200;
         return value;
     }
     return value == nil ? @"" : [value description];
-}
-
-+ (BOOL)textContainsSystemPicker:(NSString *)text
-{
-    if(text.length == 0)
-    {
-        return NO;
-    }
-    for(NSString *marker in @[@"PUPicker", @"PHPicker", @"PUPhotoPicker", @"PXPhotos", @"PhotosUI"])
-    {
-        if([text rangeOfString:marker options:NSCaseInsensitiveSearch].location != NSNotFound)
-        {
-            return YES;
-        }
-    }
-    return NO;
-}
-
-+ (BOOL)pageIsSystemScreen:(NSString *)name
-{
-    if(name.length == 0)
-    {
-        return NO;
-    }
-    if([self textContainsSystemPicker:name])
-    {
-        return YES;
-    }
-    return [name caseInsensitiveCompare:@"Photos"] == NSOrderedSame || [name caseInsensitiveCompare:@"PUPickerContainer"] == NSOrderedSame;
 }
 
 + (PGElementNode *)node:(PGElementNode *)node scaledFrom:(CGSize)pixelSize to:(CGSize)screenSize

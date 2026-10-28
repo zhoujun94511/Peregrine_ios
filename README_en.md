@@ -134,7 +134,7 @@ Peregrine separates the execution layer, which depends on the iOS test runtime, 
 │   │   ├── models.py               iPhone product types (such as iPhone16,2) to marketing names, for the go-ios path
 │   │   ├── perf.py                 Host-side resource sampling and the sampling report
 │   │   ├── runtest.py              Runs the installed Runner through go-ios and forwards its log
-│   │   └── web/                    Launcher front end: index.html, launch.css, launch.js, and site icons
+│   │   └── web/                    Launcher front end: index.html, launch.css, launch.js; site icons in web/pic/
 │   └── crash/collect.py            Crash log collection and report
 └── Peregrine/
     ├── Peregrine.xcworkspace       Xcode workspace containing the Peregrine and Pods projects

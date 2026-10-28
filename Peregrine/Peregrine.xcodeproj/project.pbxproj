@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4473C73D266CD9FD00843097 /* PeregrineRunner.m in Sources */ = {isa = PBXBuildFile; fileRef = 4473C73C266CD9FD00843097 /* PeregrineRunner.m */; };
+		A7E4B1C1266CD9FD00843002 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A7E4B1C0266CD9FD00843001 /* Assets.xcassets */; };
 		A8089DF75B42ABC48CA6D17F /* libPods-peregrine_stub.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B0B358089D0512B5E919C751 /* libPods-peregrine_stub.a */; };
 		DFABA2CB18DD202073C1FC70 /* libPods-PeregrineRunner.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C8120BE978C58C7840BC5A3A /* libPods-PeregrineRunner.a */; };
 /* End PBXBuildFile section */
@@ -19,6 +20,7 @@
 		4473C73A266CD9FD00843097 /* PeregrineRunner.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PeregrineRunner.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4473C73C266CD9FD00843097 /* PeregrineRunner.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PeregrineRunner.m; sourceTree = "<group>"; };
 		4473C73E266CD9FD00843097 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A7E4B1C0266CD9FD00843001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		75D7C3CD602D6B0DEA8716F7 /* Pods-PeregrineRunner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PeregrineRunner.release.xcconfig"; path = "Target Support Files/Pods-PeregrineRunner/Pods-PeregrineRunner.release.xcconfig"; sourceTree = "<group>"; };
 		B0B358089D0512B5E919C751 /* libPods-peregrine_stub.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-peregrine_stub.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8120BE978C58C7840BC5A3A /* libPods-PeregrineRunner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PeregrineRunner.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,6 +71,7 @@
 			children = (
 				4473C73C266CD9FD00843097 /* PeregrineRunner.m */,
 				4473C73E266CD9FD00843097 /* Info.plist */,
+				A7E4B1C0266CD9FD00843001 /* Assets.xcassets */,
 			);
 			path = PeregrineRunner;
 			sourceTree = "<group>";
@@ -191,6 +194,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7E4B1C1266CD9FD00843002 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -455,6 +459,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = F58BDF740880FDD96BB37D7F /* Pods-PeregrineRunner.debug.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -480,6 +485,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 75D7C3CD602D6B0DEA8716F7 /* Pods-PeregrineRunner.release.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;

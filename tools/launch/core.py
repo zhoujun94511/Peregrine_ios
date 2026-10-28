@@ -1217,15 +1217,18 @@ def pull_device_files(udid, bundle_id, out, previous=False):
         if previous:
             pulled = os.path.join(pulled, PREVIOUS_FOLDER)
         os.makedirs(out, exist_ok=True)
+        output_dir = out if isinstance(out, str) else os.fsdecode(out)
         for name in names:
-            source = os.path.join(pulled, name)
+            file_name = name if isinstance(name, str) else str(name)
+            source = os.path.join(pulled, file_name)
+            destination = os.path.join(output_dir, file_name)
             if os.path.isfile(source):
-                shutil.copy2(source, os.path.join(out, name))
-                copied.append(name)
+                shutil.copy2(source, destination)
+                copied.append(file_name)
         # The runner leaves the folder when it could not pack it.
         shots = os.path.join(pulled, "peregrine-shots")
         if os.path.isdir(shots):
-            shutil.copytree(shots, os.path.join(out, "peregrine-shots"), dirs_exist_ok=True)
+            shutil.copytree(shots, os.path.join(output_dir, "peregrine-shots"), dirs_exist_ok=True)
             copied.append("peregrine-shots")
         if not copied:
             raise RuntimeError("Runner 临时目录里没有结果文件")
@@ -1247,14 +1250,17 @@ def pull_simulator_files(udid, names, out, previous):
         raise RuntimeError("Runner 临时目录里没有结果文件")
     os.makedirs(out, exist_ok=True)
     copied = []
+    output_dir = out if isinstance(out, str) else os.fsdecode(out)
     for name in names:
-        source = os.path.join(pulled, name)
+        file_name = name if isinstance(name, str) else str(name)
+        source = os.path.join(pulled, file_name)
+        destination = os.path.join(output_dir, file_name)
         if os.path.isfile(source):
-            shutil.copy2(source, os.path.join(out, name))
-            copied.append(name)
+            shutil.copy2(source, destination)
+            copied.append(file_name)
     shots = os.path.join(pulled, "peregrine-shots")
     if os.path.isdir(shots):
-        shutil.copytree(shots, os.path.join(out, "peregrine-shots"), dirs_exist_ok=True)
+        shutil.copytree(shots, os.path.join(output_dir, "peregrine-shots"), dirs_exist_ok=True)
         copied.append("peregrine-shots")
     if not copied:
         raise RuntimeError("Runner 临时目录里没有结果文件")

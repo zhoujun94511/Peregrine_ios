@@ -24,8 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)fetchAppInfoOnPort:(NSInteger)port
                 completion:(void (^)(NSDictionary * _Nullable info))completion;
 
-// sample is the stub's app_perf result; nil when the stub predates app_perf or does not
-// answer within 1 second.
+// sample is the stub's app_perf payload; nil when the stub has no app_perf or does not answer within 1 second.
 - (void)fetchPerfOnPort:(NSInteger)port
              completion:(void (^)(NSDictionary * _Nullable sample))completion;
 

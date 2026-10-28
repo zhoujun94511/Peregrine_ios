@@ -10,6 +10,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy) NSArray<PGElementNode *> *nodes;
 @property (nonatomic, copy, nullable) NSString *pageName;
 @property (nonatomic, assign) BOOL outside;
+// YES when the snapshot was read. A thrown snapshot stays NO.
+@property (nonatomic, assign) BOOL inspected;
 @property (nonatomic, assign) BOOL slow;
 @property (nonatomic, assign) BOOL corrected;
 @end

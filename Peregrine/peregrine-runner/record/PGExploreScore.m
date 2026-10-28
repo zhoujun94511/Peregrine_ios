@@ -35,11 +35,7 @@
 - (void)noteSource:(NSString *)source activity:(NSString *)activity fingerprint:(uint64_t)fingerprint operate:(PGOperate *)operate bundleID:(NSString *)bundleID
 {
     _steps += 1;
-    BOOL outside = [source containsString:@"outside"] || [activity caseInsensitiveCompare:@"Photos"] == NSOrderedSame || [activity caseInsensitiveCompare:@"PUPickerContainer"] == NSOrderedSame;
-    if(!outside && activity.length > 0 && bundleID.length > 0 && ![activity isEqualToString:bundleID] && [activity containsString:@"Picker"])
-    {
-        outside = YES;
-    }
+    BOOL outside = [source containsString:@"outside"];
     if(outside)
     {
         _outsideSteps += 1;

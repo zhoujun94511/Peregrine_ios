@@ -36,6 +36,8 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
     self.rawTree = nil;
     self.activity = nil;
     self.outside = NO;
+    self.hierarchyInspected = NO;
+    self.hierarchyUnread = NO;
     self.usePoints = NO;
     self.correctionDone = NO;
     self.fingerprint = 0;
@@ -105,6 +107,7 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
     _cachedOutside = YES;
     _cachedPointTree = NO;
     self.outside = YES;
+    self.hierarchyInspected = YES;
     self.source = @"snapshot-outside";
     if(pageName.length > 0)
     {
@@ -135,6 +138,13 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
 {
     self.correctionDone = YES;
     _cachedCorrectionDone = YES;
+}
+
+- (void)discardTreeCache
+{
+    _cachedFingerprint = 0;
+    _cachedNodes = nil;
+    _cachedReuses = 0;
 }
 
 - (PGStepSnapshot *)snapshotInApplication:(XCUIApplication *)application
@@ -186,15 +196,6 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
            segmentation:(PGSegmentation *)segmentation
 {
     self.usePoints = YES;
-    if([self reuseCacheFor:fingerprint])
-    {
-        self.nodes = _cachedNodes;
-        self.activity = _cachedActivity;
-        self.outside = _cachedOutside;
-        self.source = self.outside ? @"snapshot-outside" : @"snapshot";
-        self.usePoints = [self.source isEqualToString:@"snapshot"];
-        return;
-    }
     PGStepSnapshot *snapshot = [self snapshotInApplication:application];
     if(snapshot.failure != nil)
     {
@@ -203,6 +204,8 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
     NSString *pageName = snapshot.pageName;
     BOOL outside = snapshot.outside;
     NSArray<PGElementNode *> *nodes = snapshot.nodes;
+    self.hierarchyInspected = snapshot.failure == nil;
+    self.hierarchyUnread = snapshot.failure != nil;
     if(outside)
     {
         NSLog(@"snapshot outside page %@", pageName);
@@ -217,11 +220,24 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
         _cachedPointTree = NO;
         return;
     }
+    // A snapshot object with no nodes is not a screen that was read. An empty array must not clear a cover timer.
     if(nodes.count == 0)
     {
-        self.source = @"screenshot";
+        self.hierarchyInspected = NO;
+        self.hierarchyUnread = YES;
+        self.nodes = @[];
         self.usePoints = NO;
-        self.nodes = [self pixelNodesClearOfExcluded:[PGScreenGrab nodesFromGray:gray.bytes width:pixelWidth height:pixelHeight segmentation:segmentation] application:application];
+        return;
+    }
+    if(!_cachedOutside && _cachedNodes.count > 0 && [self reuseCacheFor:fingerprint])
+    {
+        self.nodes = _cachedNodes;
+        self.activity = pageName.length > 0 ? pageName : _cachedActivity;
+        self.outside = NO;
+        self.hierarchyInspected = YES;
+        self.hierarchyUnread = NO;
+        self.source = @"snapshot";
+        self.usePoints = YES;
         return;
     }
     self.source = @"snapshot";
@@ -243,14 +259,48 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
             correctClicks:(BOOL)correctClicks
              segmentation:(PGSegmentation *)segmentation
 {
-    if(correctClicks && [self reuseCacheFor:fingerprint])
+    PGStepSnapshot *snapshot = [self snapshotInApplication:application];
+    self.hierarchyInspected = snapshot.failure == nil;
+    self.hierarchyUnread = snapshot.failure != nil;
+    if(snapshot.outside)
+    {
+        self.outside = YES;
+        self.source = @"snapshot-outside";
+        self.nodes = @[];
+        self.usePoints = NO;
+        if(snapshot.pageName.length > 0)
+        {
+            self.activity = snapshot.pageName;
+        }
+        if(fingerprint != 0)
+        {
+            _cachedFingerprint = fingerprint;
+            _cachedNodes = @[];
+            _cachedActivity = self.activity;
+            _cachedOutside = YES;
+            _cachedPointTree = NO;
+            _cachedCorrectionDone = YES;
+        }
+        return;
+    }
+    if(snapshot.failure != nil || snapshot.nodes.count == 0)
+    {
+        self.hierarchyInspected = NO;
+        self.hierarchyUnread = YES;
+        self.nodes = @[];
+        self.usePoints = NO;
+        return;
+    }
+    if(correctClicks && !_cachedOutside && _cachedNodes.count > 0 && [self reuseCacheFor:fingerprint])
     {
         self.nodes = _cachedNodes;
-        self.activity = _cachedActivity;
-        self.outside = _cachedOutside;
+        self.activity = snapshot.pageName.length > 0 ? snapshot.pageName : _cachedActivity;
+        self.outside = NO;
+        self.hierarchyInspected = YES;
+        self.hierarchyUnread = NO;
         self.usePoints = _cachedPointTree;
         self.correctionDone = _cachedCorrectionDone;
-        self.source = self.outside ? @"snapshot-outside" : (self.usePoints ? @"corrected" : @"screenshot");
+        self.source = self.usePoints ? @"corrected" : @"screenshot";
         if(!self.usePoints)
         {
             self.pixelNodes = self.nodes;
@@ -260,7 +310,7 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
     self.source = @"screenshot";
     self.nodes = [self pixelNodesClearOfExcluded:[PGScreenGrab nodesFromGray:gray.bytes width:pixelWidth height:pixelHeight segmentation:segmentation] application:application];
     self.pixelNodes = self.nodes;
-    if(correctClicks && fingerprint != 0)
+    if(correctClicks && fingerprint != 0 && self.hierarchyInspected)
     {
         _cachedFingerprint = fingerprint;
         _cachedNodes = self.nodes;

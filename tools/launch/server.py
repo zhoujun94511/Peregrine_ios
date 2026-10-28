@@ -527,10 +527,10 @@ class Handler(BaseHTTPRequestHandler):
             "/": (INDEX_PATH, "text/html; charset=utf-8"),
             "/launch.css": (os.path.join(WEB_DIR, "launch.css"), "text/css; charset=utf-8"),
             "/launch.js": (os.path.join(WEB_DIR, "launch.js"), "text/javascript; charset=utf-8"),
-            "/favicon.svg": (os.path.join(WEB_DIR, "favicon.svg"), "image/svg+xml"),
-            "/favicon-32.png": (os.path.join(WEB_DIR, "favicon-32.png"), "image/png"),
-            "/favicon.ico": (os.path.join(WEB_DIR, "favicon-32.png"), "image/png"),
-            "/apple-touch-icon.png": (os.path.join(WEB_DIR, "apple-touch-icon.png"), "image/png"),
+            "/pic/favicon.svg": (os.path.join(WEB_DIR, "pic", "favicon.svg"), "image/svg+xml"),
+            "/pic/favicon-32.png": (os.path.join(WEB_DIR, "pic", "favicon-32.png"), "image/png"),
+            "/pic/apple-touch-icon.png": (os.path.join(WEB_DIR, "pic", "apple-touch-icon.png"), "image/png"),
+            "/favicon.ico": (os.path.join(WEB_DIR, "pic", "favicon-32.png"), "image/png"),
         }
         if path in static:
             self._send_file(*static[path])
