@@ -251,6 +251,56 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
     _cachedPointTree = YES;
 }
 
+// Nodes shorter than 20pt stay off this tree. The pixel hit test still drops thin clicks; handing those nodes to the model would tap them.
+- (NSArray<PGElementNode *> *)operableSnapshotNodes:(NSArray<PGElementNode *> *)nodes
+{
+    NSMutableArray<PGElementNode *> *kept = [NSMutableArray array];
+    BOOL interactive = NO;
+    for(PGElementNode *node in [self pointNodesClearOfExcluded:nodes])
+    {
+        if(node.rect.height < 20)
+        {
+            continue;
+        }
+        [kept addObject:node];
+        if(node.interactive)
+        {
+            interactive = YES;
+        }
+    }
+    return interactive ? kept : @[];
+}
+
+- (BOOL)adoptOperableSnapshot:(NSArray<PGElementNode *> *)nodes pageName:(NSString *)pageName fingerprint:(uint64_t)fingerprint
+{
+    NSArray<PGElementNode *> *operable = [self operableSnapshotNodes:nodes];
+    if(operable.count == 0)
+    {
+        return NO;
+    }
+    self.nodes = operable;
+    self.usePoints = YES;
+    self.correctionDone = YES;
+    self.source = @"snapshot";
+    self.outside = NO;
+    self.hierarchyInspected = YES;
+    self.hierarchyUnread = NO;
+    if(pageName.length > 0)
+    {
+        self.activity = pageName;
+    }
+    if(fingerprint != 0)
+    {
+        _cachedFingerprint = fingerprint;
+        _cachedNodes = operable;
+        _cachedActivity = self.activity;
+        _cachedOutside = NO;
+        _cachedPointTree = YES;
+        _cachedCorrectionDone = YES;
+    }
+    return YES;
+}
+
 - (void)captureScreenshot:(XCUIApplication *)application
                      gray:(NSData *)gray
                     width:(NSInteger)pixelWidth
@@ -305,6 +355,10 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
         {
             self.pixelNodes = self.nodes;
         }
+        return;
+    }
+    if(correctClicks && [self adoptOperableSnapshot:snapshot.nodes pageName:snapshot.pageName fingerprint:fingerprint])
+    {
         return;
     }
     self.source = @"screenshot";

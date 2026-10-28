@@ -2,7 +2,7 @@
 
 [简体中文](handbook-cn.md) · [English](handbook-en.md)
 
-For setup, signing, and the first run, see the [README](../README_en.md). This document covers day-to-day execution, physical device vs Simulator, environment variables, configuration files, result files, and crash collection.
+For setup, signing, and the first run, see the [README](../README_en.md). This document covers day-to-day execution, physical device vs Simulator, environment variables, configuration files, result files, and crash collection. Build, signing, and Test failures inside Xcode are in [Common problems](#common-problems) at the end. Stub integration is in [Instrumentation](instrumentation.md).
 
 ## Running a test
 
@@ -397,3 +397,14 @@ These are expensive, change how the app runs, or do not fit Peregrine, and are n
 | System log (`oslog`)                                              | Large volume; pymobiledevice3 marks it unstable                                                                                                                      |
 | Main-thread stacks at a stall                                     | Would repeatedly suspend the main thread inside the stub and then symbolicate; cost and risk outweigh the gain                                                       |
 | App-owned frame rate in the stub (`CADisplayLink`)                | A main-thread callback every frame, and it keeps a higher refresh rate, which changes the app's power and display behavior                                           |
+
+## Common problems
+
+These four show up when building or running `PeregrineRunner` from Xcode. The launch page and the command line take a different path. Stub integration problems are in [Instrumentation](instrumentation.md#5-common-problems).
+
+| Symptom | Cause and fix |
+|---------|----------------|
+| Signing seems to work only from the command line; the Xcode Signing page has an empty Team | `DEVELOPMENT_TEAM` in the project is an empty string. The team is passed to `xcodebuild` by `cli.py install --team` or `DEVELOPMENT_TEAM=`. Open `Peregrine/Peregrine.xcworkspace` (not `Peregrine.xcodeproj`), select the `PeregrineRunner` target, and open Signing & Capabilities. Leave Automatically manage signing on. Choose the local development team, then Product → Test signs the same way. Choosing a team writes the team id into `project.pbxproj`; do not commit that change. Keep the Bundle Identifier `com.eternalengine.PeregrineRunner`. The app installed on the phone is the wrapper `com.eternalengine.PeregrineRunner.xctrunner`. Do not change the Bundle ID to the `.xctrunner` id. A red error on the Signing page usually means this Bundle ID is not registered for that team, or the certificate has expired. `cli.py install --team` still uses the team on that command for that build. |
+| `testPeregrine` fails: `Set PEREGRINE_BUNDLEID to the app under test` | A Test action started from Xcode still has `PEREGRINE_BUNDLEID` set to `${PEREGRINE_BUNDLEID}`. If the environment that launched Xcode does not define it, the test receives an empty string and exploration does not start. The launch page and `cli.py run --bundle-id` set the app's Bundle ID before the run. To explore from Xcode: Edit Scheme → Test → Arguments → Environment Variables, and set `PEREGRINE_BUNDLEID` to the app under test, for example `com.example.app`. Duration defaults to 1 minute. For a communication check only, run `testPingNetwork`; it does not need this value. `internet denied (not required)` means the system denied the Runner wireless data; the check can still pass. See Communication check above. |
+| `[CP] Copy Pods Resources` reports `Sandbox: bash deny(1) file-write-create`, then `realpath: illegal option -- m` | The CocoaPods script writes `Pods/resources-to-copy-PeregrineRunner.txt` and deletes it after the copy. With `ENABLE_USER_SCRIPT_SANDBOXING` set to `YES`, the script sandbox cannot create a file under `Pods`. `realpath -m` is the script's own error printer failing again; macOS `realpath` has no `-m` option. Debug and Release in this project set the flag to `NO`. Turning it back to `YES` brings the same error back. |
+| The device says `Developer Disk Image is not mounted` and asks for the device to be unlocked | Development services are not mounted. A locked phone, or a Mac the phone has not trusted, cannot mount them. Unlock the phone and leave it on the Home Screen, connected by cable. Tap Trust if asked. On iOS 16 and later, Developer Mode must be on. This is not a signing failure. |

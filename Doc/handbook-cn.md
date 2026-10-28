@@ -2,7 +2,7 @@
 
 [简体中文](handbook-cn.md) · [English](handbook-en.md)
 
-依赖安装、签名与首次运行见 [README](../README.md)。本文说明日常执行方式、真机与模拟器对照、环境变量、配置文件、结果文件与崩溃收集。
+依赖安装、签名与首次运行见 [README](../README.md)。本文说明日常执行方式、真机与模拟器对照、环境变量、配置文件、结果文件与崩溃收集。在 Xcode 里编译、签名或直接跑测试时的报错见文末「常见问题」。插桩接入见 [插桩接入](插桩接入.md)。
 
 ## 执行测试
 
@@ -397,3 +397,14 @@ Runner 探活成功后再发 `app_info`：Bundle ID 与 `PEREGRINE_BUNDLEID` 一
 | 系统日志（`oslog`）                                              | 日志量大，pymobiledevice3 标注为不稳定                     |
 | 卡顿时的主线程调用栈                                                 | 需在插桩内反复挂起主线程取栈，并另做符号化，开销与风险高于收益                 |
 | 插桩端的应用自身帧率（`CADisplayLink`）                                | 每帧在主线程回调，并会让系统保持较高的屏幕刷新率，改变被测应用的耗电与刷新行为         |
+
+## 常见问题
+
+在 Xcode 里编译或直接跑 `PeregrineRunner` 时，下面四类报错与启动页、命令行不是同一条路径。插桩接入的问题见 [插桩接入](插桩接入.md#5-常见问题)。
+
+| 现象 | 原因和处理 |
+|------|------------|
+| 签名只能走命令行；Xcode 的 Signing 页 Team 为空 | 工程里 `DEVELOPMENT_TEAM` 是空字符串，团队只在 `cli.py install --team` 或 `DEVELOPMENT_TEAM=` 传给 `xcodebuild`。打开 `Peregrine/Peregrine.xcworkspace`（不要打开 `Peregrine.xcodeproj`），目标选 `PeregrineRunner`，打开 Signing & Capabilities。Automatically manage signing 保持勾选。在 Team 里选本机开发团队后，用 Product → Test 同样会签名。选中团队后 Xcode 会把团队标识写进 `project.pbxproj`，不要把这个改动提交进仓库。Bundle Identifier 保持 `com.eternalengine.PeregrineRunner`。装到手机上的是 Xcode 套出来的 `com.eternalengine.PeregrineRunner.xctrunner`，不要把 Bundle ID 改成带 `.xctrunner` 的那个。签名页红字常见于该 Bundle ID 尚未在这个团队下注册，或证书过期。命令行仍可带 `--team`，该次构建用命令行上的团队。 |
+| `testPeregrine` 失败：`Set PEREGRINE_BUNDLEID to the app under test` | 在 Xcode 里直接 Test 时，scheme 中的 `PEREGRINE_BUNDLEID` 仍是 `${PEREGRINE_BUNDLEID}`。启动 Xcode 的环境里没有这个变量，传入的就是空字符串，探索不会开始。启动页和 `cli.py run --bundle-id` 会在开跑前写入被测应用的 Bundle ID。要在 Xcode 里跑探索：Edit Scheme → Test → Arguments → Environment Variables，把 `PEREGRINE_BUNDLEID` 设成被测应用的 Bundle ID，例如 `com.example.app`。时长不填时默认 1 分钟。只做通信检查时跑 `testPingNetwork`，不必填这个值。`internet denied (not required)` 表示系统拒绝 Runner 使用无线数据，通信检查仍可通过，见上文「通信检查」。 |
+| `[CP] Copy Pods Resources` 报 `Sandbox: bash deny(1) file-write-create`，接着 `realpath: illegal option -- m` | CocoaPods 要把资源清单写到 `Pods/resources-to-copy-PeregrineRunner.txt`，拷完再删掉。`ENABLE_USER_SCRIPT_SANDBOXING` 为 `YES` 时，脚本沙盒不允许在 `Pods` 目录新建文件。`realpath -m` 是脚本报错之后自己打印位置时再次失败，macOS 的 `realpath` 没有 `-m`。工程的 Debug 与 Release 已将该项设为 `NO`。把它改回 `YES` 后，同一条错误会再出现。 |
+| 设备显示 `Developer Disk Image is not mounted`，并要求解锁 | 开发服务还没挂上，手机锁屏或尚未信任这台电脑时系统不允许挂载。解锁并停在主屏幕，用数据线连接；弹出信任提示时点信任。iOS 16 及以上还须打开开发者模式。这不是签名失败。 |
