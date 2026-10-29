@@ -21,6 +21,8 @@ typedef struct {
 @property (nonatomic, assign) BOOL interactive;
 @property (nonatomic, assign) BOOL scrollable;
 @property (nonatomic, assign) BOOL clickable;
+// The stub sets this on a tall page sheet or form sheet. Screenshot and snapshot trees leave it unset.
+@property (nonatomic, assign) BOOL sheet;
 @property (nonatomic, copy) NSArray<PGElementNode *> *children;
 
 + (NSArray<PGElementNode *> *)nodesFromResult:(nullable id)result;

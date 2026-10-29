@@ -263,9 +263,9 @@ static void PGNoteOutside(PGExploreScore *score, PGStepScreen *screens, NSString
                 correctClicks = sourceMode == PGSnapshotSourceModeCombined;
                 [screens captureInApplication:app stubAlive:NO client:client port:session.dataPort snapshotMode:snapshotEnabled correctClicks:correctClicks segmentation:segmentation];
             }
-            if(!stubAlive)
+            if(!stubAlive || screens.outside)
             {
-                if(screens.hierarchyUnread)
+                if(!stubAlive && screens.hierarchyUnread)
                 {
                     NSLog(@"foreground hierarchy unread");
                 }
@@ -341,7 +341,7 @@ static void PGNoteOutside(PGExploreScore *score, PGStepScreen *screens, NSString
             [appWatch noteInApplication];
             [coverage recordActivity:screens.activity.length > 0 ? screens.activity : session.bundleID];
             [applet observeActivity:screens.activity];
-            NSString *signature = [PGBlockRecovery signatureForActivity:screens.activity fingerprint:screens.fingerprint];
+            NSString *signature = [block signatureForNodes:screens.nodes fingerprint:screens.fingerprint activity:screens.activity];
             PGOperate *recovery = [block noteSignature:signature allowsRestart:!config.skipRestart];
             PGOperate *remote = [PGOperate operateFromDictionary:[commands takeCommand]];
             PGOperate *scheduled = remote.act.length > 0 ? nil : [cases dueOperateAt:[NSDate date] allowsRestart:!config.skipRestart];
@@ -444,6 +444,7 @@ static void PGNoteOutside(PGExploreScore *score, PGStepScreen *screens, NSString
             [NSThread sleepForTimeInterval:pause];
         }
     }
+    [appWatch stopPulse];
     NSInteger elapsedMillis = (NSInteger)([[NSDate date] timeIntervalSinceDate:taskStarted] * 1000.0);
     NSLog(@"%@", [score line]);
     NSLog(@"%@", [events.anomalies line]);

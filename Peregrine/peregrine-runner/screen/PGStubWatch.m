@@ -42,8 +42,8 @@ static const NSTimeInterval PGStubReprobeSeconds = 4;
     NSString *owner = [info[@"bundle_id"] isKindOfClass:[NSString class]] ? info[@"bundle_id"] : @"";
     if(owner.length == 0)
     {
-        NSLog(@"stub app_info unavailable on port %ld, port trusted", (long)_port);
-        return YES;
+        NSLog(@"stub app_info unavailable on port %ld, stub not verified", (long)_port);
+        return NO;
     }
     if(_bundleID.length > 0 && ![owner isEqualToString:_bundleID])
     {

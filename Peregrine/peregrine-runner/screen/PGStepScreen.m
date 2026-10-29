@@ -52,6 +52,15 @@ static const NSInteger PGCachedTreeReuseLimit = 3;
         self.activity = [PGOperateChoice activityInNodes:nodes];
         self.fingerprint = [PGElementNode fingerprintOfNodes:nodes];
         self.nodes = [self pointNodesClearOfExcluded:nodes];
+        for(PGElementNode *node in [PGElementNode flattenedNodes:self.nodes])
+        {
+            if(node.sheet)
+            {
+                self.outside = YES;
+                NSLog(@"foreground covered by sheet");
+                break;
+            }
+        }
         return;
     }
     NSInteger pixelWidth = 0;

@@ -21,6 +21,7 @@ static const NSTimeInterval PGRunPulseStallSeconds = 90;
 @property (nonatomic, strong) NSDate *lastBeat;
 @property (nonatomic, strong) NSDate *lastExplore;
 @property (nonatomic, assign) BOOL pulseStarted;
+@property (nonatomic, assign) BOOL pulseStopRequested;
 @property (nonatomic, assign) BOOL stallLogged;
 @property (nonatomic, assign) BOOL stepWasSlow;
 @end
@@ -136,11 +137,20 @@ static const NSTimeInterval PGRunPulseStallSeconds = 90;
         return;
     }
     self.pulseStarted = YES;
+    self.pulseStopRequested = NO;
     [self beat];
     [self noteInApplication];
     NSThread *thread = [[NSThread alloc] initWithTarget:self selector:@selector(pulseLoop) object:nil];
     thread.name = @"peregrine-pulse";
     [thread start];
+}
+
+- (void)stopPulse
+{
+    @synchronized(self)
+    {
+        self.pulseStopRequested = YES;
+    }
 }
 
 - (void)beat
@@ -184,7 +194,15 @@ static const NSTimeInterval PGRunPulseStallSeconds = 90;
 {
     while(YES)
     {
-        [NSThread sleepForTimeInterval:5];
+        [NSThread sleepForTimeInterval:0.25];
+        @synchronized(self)
+        {
+            if(self.pulseStopRequested)
+            {
+                self.pulseStarted = NO;
+                return;
+            }
+        }
         NSDate *beat = nil;
         BOOL alreadyLogged = NO;
         @synchronized(self)

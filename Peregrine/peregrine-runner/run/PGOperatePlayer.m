@@ -57,6 +57,18 @@ static NSString * PGPlayerTarget(PGOperate *operate)
     return [parts componentsJoinedByString:@" "];
 }
 
+static NSString *PGOperateResultName(PGOperateResult result)
+{
+    switch(result)
+    {
+        case PGOperateResultSuccess: return @"success";
+        case PGOperateResultTargetNotFound: return @"target_not_found";
+        case PGOperateResultExecutionFailed: return @"execution_failed";
+        case PGOperateResultSkipped: return @"skipped";
+    }
+    return @"execution_failed";
+}
+
 @implementation PGOperatePlayer
 
 + (BOOL)openURL:(NSURL *)url application:(XCUIApplication *)application
@@ -73,7 +85,7 @@ static NSString * PGPlayerTarget(PGOperate *operate)
     return NO;
 }
 
-+ (void)traceOperate:(PGOperate *)operate
++ (PGOperateResult)traceOperate:(PGOperate *)operate
                nodes:(NSArray<PGElementNode *> *)nodes
                inApp:(XCUIApplication *)application
                cases:(PGCaseSchedule *)cases
@@ -88,11 +100,11 @@ static NSString * PGPlayerTarget(PGOperate *operate)
         @"app_state": PGPlayerAppStateName(application.state)
     }];
     NSDate *started = [NSDate date];
-    [self performOperate:operate nodes:nodes inApp:application cases:cases resolveElement:resolveElement screen:screen];
+    PGOperateResult operateResult = [self performOperate:operate nodes:nodes inApp:application resolveElement:resolveElement screen:screen];
     NSInteger durationMillis = (NSInteger)([[NSDate date] timeIntervalSinceDate:started] * 1000.0);
     BOOL intentional = [act caseInsensitiveCompare:@"RESTART"] == NSOrderedSame;
-    NSString *result = intentional ? @"intentional" : @"success";
-    if(application.state != XCUIApplicationStateRunningForeground)
+    NSString *result = intentional && operateResult == PGOperateResultSuccess ? @"intentional" : PGOperateResultName(operateResult);
+    if(operateResult == PGOperateResultSuccess && application.state != XCUIApplicationStateRunningForeground)
     {
         result = intentional ? @"intentional_not_foreground" : @"app_not_foreground";
     }
@@ -106,6 +118,11 @@ static NSString * PGPlayerTarget(PGOperate *operate)
     {
         [log recordEventType:@"action_timeout" fields:fields];
     }
+    if(operateResult != PGOperateResultSuccess && operateResult != PGOperateResultSkipped)
+    {
+        [cases noteStepFailed];
+    }
+    return operateResult;
 }
 
 // Screenshot blocks carry no id or text, so CLICK_ID / CLICK_TEXT look the control up in a snapshot.
@@ -125,34 +142,35 @@ static NSString * PGPlayerTarget(PGOperate *operate)
     return outside ? @[] : (nodes ?: @[]);
 }
 
-+ (void)typeText:(NSString *)text inApplication:(XCUIApplication *)application
++ (BOOL)typeText:(NSString *)text inApplication:(XCUIApplication *)application
 {
     if(text.length == 0 || !application.keyboards.firstMatch.exists)
     {
-        return;
+        return NO;
     }
     [application typeText:text];
+    return YES;
 }
 
-+ (void)performOperate:(PGOperate *)operate nodes:(NSArray<PGElementNode *> *)nodes inApp:(XCUIApplication *)application cases:(PGCaseSchedule *)cases resolveElement:(BOOL)resolveElement screen:(CGSize)screen
++ (PGOperateResult)performOperate:(PGOperate *)operate nodes:(NSArray<PGElementNode *> *)nodes inApp:(XCUIApplication *)application resolveElement:(BOOL)resolveElement screen:(CGSize)screen
 {
     @try
     {
-        [self performOperateBody:operate nodes:nodes inApp:application cases:cases resolveElement:resolveElement screen:screen];
+        return [self performOperateBody:operate nodes:nodes inApp:application resolveElement:resolveElement screen:screen];
     }
     @catch(NSException *exception)
     {
         NSLog(@"operate %@ failed: %@", operate.act, exception.reason);
+        return PGOperateResultExecutionFailed;
     }
 }
 
-+ (void)performOperateBody:(PGOperate *)operate nodes:(NSArray<PGElementNode *> *)nodes inApp:(XCUIApplication *)application cases:(PGCaseSchedule *)cases resolveElement:(BOOL)resolveElement screen:(CGSize)screen
++ (PGOperateResult)performOperateBody:(PGOperate *)operate nodes:(NSArray<PGElementNode *> *)nodes inApp:(XCUIApplication *)application resolveElement:(BOOL)resolveElement screen:(CGSize)screen
 {
     if([operate.act caseInsensitiveCompare:@"SCHEMA"] == NSOrderedSame)
     {
         NSString *schema = operate.name.length > 0 ? operate.name : operate.text;
-        [self openURL:[PGAppletSession openableURLFromSchema:schema] application:application];
-        return;
+        return [self openURL:[PGAppletSession openableURLFromSchema:schema] application:application] ? PGOperateResultSuccess : PGOperateResultExecutionFailed;
     }
     NSString *act = operate.act.uppercaseString ?: @"";
     BOOL pointAction = [act isEqualToString:@"CLICK"] || [act isEqualToString:@"LONG_PRESS"] || [act isEqualToString:@"TYPE"] || [act isEqualToString:@"DOUBLE_TAP"];
@@ -163,18 +181,21 @@ static NSString * PGPlayerTarget(PGOperate *operate)
     {
         @try
         {
-            if(element.hittable && PGFramesAgree(frame, operate.rect))
+            // The frame already came from a snapshot. Asking XCUIElement whether the
+            // button is hittable records a test failure when the activation point is
+            // invalid, and @try cannot clear that failure. Tap the snapshot center.
+            if(PGFramesAgree(frame, operate.rect))
             {
-                // XCUIElement actions wait for app animations to finish, up to 60 s on a
-                // screen that keeps animating. Tapping the element's center through the
-                // application coordinate skips that wait.
                 XCUICoordinate *origin = [application coordinateWithNormalizedOffset:CGVectorMake(0, 0)];
                 XCUICoordinate *center = [origin coordinateWithOffset:CGVectorMake(CGRectGetMidX(frame), CGRectGetMidY(frame))];
                 if([act isEqualToString:@"TYPE"])
                 {
                     [center tap];
                     NSString *text = operate.text.length > 0 ? operate.text : @"peregrine";
-                    [self typeText:text inApplication:application];
+                    if(![self typeText:text inApplication:application])
+                    {
+                        return PGOperateResultExecutionFailed;
+                    }
                 }
                 else if([act isEqualToString:@"LONG_PRESS"])
                 {
@@ -190,7 +211,7 @@ static NSString * PGPlayerTarget(PGOperate *operate)
                     [center tap];
                 }
                 NSLog(@"element %@ %@", act, matched.identifier.length > 0 ? matched.identifier : (matched.label ?: @""));
-                return;
+                return PGOperateResultSuccess;
             }
         }
         @catch(NSException *exception)
@@ -207,7 +228,7 @@ static NSString * PGPlayerTarget(PGOperate *operate)
     if(gesture.unresolved)
     {
         NSLog(@"operate %@ target not found id %@ text %@", operate.act, operate.queryIdentifier ?: @"", operate.queryText ?: @"");
-        [cases noteStepFailed];
+        return PGOperateResultTargetNotFound;
     }
     XCUICoordinate *origin = [application coordinateWithNormalizedOffset:CGVectorMake(0, 0)];
     switch(gesture.kind)
@@ -237,7 +258,7 @@ static NSString * PGPlayerTarget(PGOperate *operate)
         case PGGestureKindPath: {
             if(gesture.points.count < 2)
             {
-                break;
+                return PGOperateResultExecutionFailed;
             }
             CGPoint first = gesture.points.firstObject.CGPointValue;
             XCUICoordinate *current = [origin coordinateWithOffset:CGVectorMake(first.x, first.y)];
@@ -277,7 +298,10 @@ static NSString * PGPlayerTarget(PGOperate *operate)
                 XCUICoordinate *point = [origin coordinateWithOffset:CGVectorMake(gesture.start.left, gesture.start.top)];
                 [point tap];
             }
-            [self typeText:gesture.text inApplication:application];
+            if(![self typeText:gesture.text inApplication:application])
+            {
+                return PGOperateResultExecutionFailed;
+            }
             break;
         }
         case PGGestureKindDoubleTap:
@@ -293,8 +317,9 @@ static NSString * PGPlayerTarget(PGOperate *operate)
             break;
         }
         case PGGestureKindNone:
-            break;
+            return PGOperateResultSkipped;
     }
+    return PGOperateResultSuccess;
 }
 
 @end

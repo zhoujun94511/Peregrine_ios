@@ -36,6 +36,7 @@ from core import (  # noqa: E402
     probe_stub,
     prune_runs,
     pull_device_files,
+    pull_report,
     run_paths,
     signing_team,
     RunOutput,
@@ -65,16 +66,13 @@ def resolve_udid(udid):
     names = "\n".join("  %s  %s" % (device["udid"], device["label"]) for device in devices)
     raise CliError("连接了多台设备，用 --udid 指定其中一台：\n%s" % names)
 
-
 def check_installed(udid, bundle_id):
     try:
         installed = {app["bundleId"] for app in list_apps(udid)}
     except (RuntimeError, subprocess.TimeoutExpired) as exc:
-        print("app check skipped: %s" % exc, flush=True)
-        return
+        raise CliError("这台设备暂时读不到应用：%s" % exc) from exc
     if bundle_id not in installed:
         raise CliError("这台设备上没有 %s" % bundle_id)
-
 
 def stream(command, environment, log_path, preface=""):
     proc, master = spawn_output(command, environment, IOS_DIR, False)
@@ -121,8 +119,8 @@ def append_log(log_path, text):
 
 def collect(udid, bundle_id, since, paths):
     try:
-        copied = pull_device_files(udid, bundle_id, paths["device"])
-        line = "device files success %s\n" % " ".join(copied)
+        copied, missing = pull_device_files(udid, bundle_id, paths["device"])
+        line = pull_report(copied, missing)
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
         line = "device files failed: %s\n" % exc
     append_log(paths["log"], "\n" + line)
@@ -301,8 +299,8 @@ def cmd_stub(args):
 def cmd_pull(args):
     udid = resolve_udid(args.udid)
     out = args.out or os.path.join(ROUNDS_DIR, "pull-%s" % new_stamp())
-    copied = pull_device_files(udid, args.bundle_id, out, args.previous)
-    print("device files success %s" % " ".join(copied))
+    copied, missing = pull_device_files(udid, args.bundle_id, out, args.previous)
+    print(pull_report(copied, missing), end="")
     print("device files written %s" % os.path.abspath(out))
     return 0
 

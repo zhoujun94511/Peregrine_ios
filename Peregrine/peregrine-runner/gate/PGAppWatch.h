@@ -33,6 +33,7 @@ typedef NS_ENUM(NSInteger, PGForegroundWatch) {
 // A background pulse logs when the loop stops calling beat. A slow returned step and a long stretch
 // with no exploration each ask for one restart, so a blocked snapshot cannot sit there for the whole run.
 - (void)startPulse;
+- (void)stopPulse;
 - (void)beat;
 - (BOOL)consumeSlowStep;
 - (BOOL)exploreIdle;

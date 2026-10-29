@@ -8,7 +8,18 @@
 #import "PGWirelessAccess.h"
 #import <Network/Network.h>
 
-static NSString *const PGPingURL = @"https://www.taobao.com/";
+static NSString *const PGPingURL = @"https://captive.apple.com/hotspot-detect.html";
+
+static NSURL *PGProbeURL(NSString *urlString)
+{
+    NSString *candidate = urlString.length > 0 ? urlString : PGPingURL;
+    NSURL *url = [NSURL URLWithString:candidate];
+    if(!([url.scheme.lowercaseString isEqualToString:@"http"] || [url.scheme.lowercaseString isEqualToString:@"https"]) || url.host.length == 0)
+    {
+        return [NSURL URLWithString:PGPingURL];
+    }
+    return url;
+}
 
 @implementation PGNetworkProbe
 
@@ -56,6 +67,11 @@ static NSString *const PGPingURL = @"https://www.taobao.com/";
 
 + (BOOL)requestPing:(NSString *_Nullable *_Nullable)failure
 {
+    return [self requestPingURL:nil failure:failure];
+}
+
++ (BOOL)requestPingURL:(NSString *)urlString failure:(NSString *_Nullable *_Nullable)failure
+{
     NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
     configuration.allowsCellularAccess = YES;
     if(@available(iOS 13.0, *))
@@ -72,7 +88,7 @@ static NSString *const PGPingURL = @"https://www.taobao.com/";
     __block BOOL success = NO;
     __block NSError *requestError = nil;
     __block NSInteger statusCode = 0;
-    NSURL *url = [NSURL URLWithString:PGPingURL];
+    NSURL *url = PGProbeURL(urlString);
     NSURLSessionDataTask *task = [session dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         @synchronized(lock) {
             if(completed) return; // Ignore cancellation after the caller's deadline.
@@ -115,6 +131,11 @@ static NSString *const PGPingURL = @"https://www.taobao.com/";
 
 + (BOOL)probeNetwork
 {
+    return [self probeNetworkWithURL:nil];
+}
+
++ (BOOL)probeNetworkWithURL:(NSString *)urlString
+{
     [PGForegroundState waitUntilActive:0];
     // Keep the runner in front and wait for the system wireless-data dialog. Opening Settings covers that dialog.
     [PGWirelessAccess activateCurrentRunner];
@@ -136,7 +157,7 @@ static NSString *const PGPingURL = @"https://www.taobao.com/";
             [PGWirelessAccess leaveForWirelessPrompt];
             leftForeground = YES;
         }
-        if([self requestPing:&failure]) return YES;
+        if([self requestPingURL:urlString failure:&failure]) return YES;
         [NSThread sleepForTimeInterval:1];
     }
     NSLog(@"ping network failed %@", failure ?: @"");

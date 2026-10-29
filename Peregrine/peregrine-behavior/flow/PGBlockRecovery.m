@@ -186,6 +186,8 @@ static const NSInteger PGRestartCooldownSteps = 60;
 // runs, so a restart that was replaced by another command does not cool the screen.
 @property (nonatomic, copy) NSString *pendingRestartSignature;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *restartCooldown;
+// Identified controls of the screen the current signature belongs to.
+@property (nonatomic, copy, nullable) NSSet<NSString *> *controlAnchor;
 @end
 
 // The last escalation has run; seeing the same screen once more means recovery cannot leave it.
@@ -236,6 +238,86 @@ static const NSInteger PGBlockStageDone = 3;
         return [NSString stringWithFormat:@"%llx", fingerprint];
     }
     return activity ?: @"";
+}
+
++ (NSSet<NSString *> *)controlKeysInNodes:(NSArray<PGElementNode *> *)nodes
+{
+    NSMutableSet<NSString *> *keys = [NSMutableSet set];
+    for(PGElementNode *node in [PGElementNode flattenedNodes:nodes])
+    {
+        if(!node.clickable || node.identifier.length == 0)
+        {
+            continue;
+        }
+        [keys addObject:[NSString stringWithFormat:@"%@|%@", node.type ?: @"", node.identifier]];
+    }
+    return keys;
+}
+
++ (NSString *)controlSignatureForKeys:(NSSet<NSString *> *)keys
+                               anchor:(NSSet<NSString *> *)anchor
+                             keptKeys:(NSSet<NSString *> * _Nullable *)keptKeys
+{
+    NSSet<NSString *> *current = keys ?: [NSSet set];
+    // Two or three named controls also occur on unrelated screens, so a smaller set stays on the pixel hash.
+    if(current.count < 4)
+    {
+        if(keptKeys != NULL)
+        {
+            *keptKeys = nil;
+        }
+        return nil;
+    }
+    NSSet<NSString *> *basis = current;
+    if(anchor.count >= 4)
+    {
+        NSInteger shared = 0;
+        for(NSString *key in current)
+        {
+            if([anchor containsObject:key])
+            {
+                shared += 1;
+            }
+        }
+        NSInteger added = current.count - shared;
+        NSInteger removed = anchor.count - shared;
+        // One animated control can appear or disappear. A tab change replaces more than that.
+        if(added + removed <= 1 && shared >= 4)
+        {
+            basis = anchor;
+        }
+    }
+    if(keptKeys != NULL)
+    {
+        *keptKeys = basis;
+    }
+    NSArray<NSString *> *ordered = [basis.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    uint64_t hash = 1469598103934665603ULL;
+    for(NSString *key in ordered)
+    {
+        NSData *bytes = [key dataUsingEncoding:NSUTF8StringEncoding];
+        const uint8_t *raw = bytes.bytes;
+        for(NSUInteger index = 0; index < bytes.length; index++)
+        {
+            hash ^= raw[index];
+            hash *= 1099511628211ULL;
+        }
+        hash ^= 0x1f;
+        hash *= 1099511628211ULL;
+    }
+    return [NSString stringWithFormat:@"c:%llx", hash];
+}
+
+- (NSString *)signatureForNodes:(NSArray<PGElementNode *> *)nodes fingerprint:(uint64_t)fingerprint activity:(NSString *)activity
+{
+    NSSet<NSString *> *kept = nil;
+    NSString *signature = [PGBlockRecovery controlSignatureForKeys:[PGBlockRecovery controlKeysInNodes:nodes] anchor:self.controlAnchor keptKeys:&kept];
+    self.controlAnchor = kept;
+    if(signature.length > 0)
+    {
+        return signature;
+    }
+    return [PGBlockRecovery signatureForActivity:activity fingerprint:fingerprint];
 }
 
 - (BOOL)matchesSignature:(NSString *)signature

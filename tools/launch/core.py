@@ -1173,6 +1173,14 @@ def install_commands(udid, team):
     install = ["xcrun", "devicectl", "device", "install", "app", "--device", udid, app]
     return build, install
 
+def pull_report(copied, missing):
+    """One success line, plus the names that were requested and did not arrive."""
+    lines = ["device files success %s" % " ".join(copied)]
+    if missing:
+        lines.append("device files missing %s" % " ".join(missing))
+    return "\n".join(lines) + "\n"
+
+
 
 def pull_device_files(udid, bundle_id, out, previous=False):
     names = list(DEVICE_FILES)
@@ -1184,6 +1192,7 @@ def pull_device_files(udid, bundle_id, out, previous=False):
     if backend() == "goios":
         os.makedirs(out, exist_ok=True)
         copied = []
+        missing = []
         for name in names:
             try:
                 pull = ["fsync", "--app=%s" % RUNNER_CONTAINER, "pull", "--srcPath=/tmp/%s%s" % (folder, name), "--dstPath=%s" % out]
@@ -1191,12 +1200,15 @@ def pull_device_files(udid, bundle_id, out, previous=False):
                     pull.extend(tunnel_info_args())
                 go_ios_run(pull, DEVICE_PULL_TIMEOUT, udid)
             except RuntimeError:
+                missing.append(name)
                 continue
             if os.path.isfile(os.path.join(out, name)):
                 copied.append(name)
+            else:
+                missing.append(name)
         if not copied:
-            raise RuntimeError("Runner 临时目录里没有结果文件")
-        return copied
+            raise RuntimeError("Runner 临时目录里没有结果文件%s" % ("（缺 %s）" % " ".join(missing) if missing else ""))
+        return copied, missing
     copied = []
     with tempfile.TemporaryDirectory() as scratch:
         pulled = os.path.join(scratch, "tmp")
@@ -1232,7 +1244,7 @@ def pull_device_files(udid, bundle_id, out, previous=False):
             copied.append("peregrine-shots")
         if not copied:
             raise RuntimeError("Runner 临时目录里没有结果文件")
-    return copied
+    return copied, [name for name in names if name not in copied]
 
 
 def pull_simulator_files(udid, names, out, previous):
@@ -1264,7 +1276,7 @@ def pull_simulator_files(udid, names, out, previous):
         copied.append("peregrine-shots")
     if not copied:
         raise RuntimeError("Runner 临时目录里没有结果文件")
-    return copied
+    return copied, [name for name in names if name not in copied]
 
 
 def write_export(stamp, handle):

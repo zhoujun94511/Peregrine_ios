@@ -1,4 +1,5 @@
 #import "PGAlertGate.h"
+#import "PGOverlayRules.h"
 
 // SpringBoard is the only system process queried every step.
 // Walking the rest of the system UI catalog stalled exploration for minutes.
@@ -9,33 +10,21 @@ static NSArray<NSString *> *PGDismissLabels(void)
         @"Cancel", @"Not Now", @"Close", @"Later", @"Dismiss", @"Remind Me Later", @"No Thanks",
         @"Don't Allow", @"Don’t Allow",
         @"取消", @"以后", @"关闭", @"稍后", @"不允许",
-        @"稍后提醒我", @"稍后提醒", @"以后再说", @"暂不", @"忽略", @"Remind Me Tomorrow"
-    ];
-}
-
-static NSArray<NSString *> *PGInstallLabels(void)
-{
-    return @[
-        @"Install", @"Install Now", @"Install Tonight", @"Download and Install",
-        @"Update", @"Update Now", @"Update Tonight", @"Upgrade", @"Restart Now",
-        @"安装", @"现在安装", @"立即安装", @"今晚安装",
-        @"更新", @"现在更新", @"立即更新", @"升级", @"立即重新启动"
-    ];
-}
-
-static NSArray<NSString *> *PGPaymentLabels(void)
-{
-    return @[
-        @"Buy", @"Subscribe", @"Purchase", @"Pay",
-        @"购买", @"订阅", @"付款", @"支付"
-    ];
-}
-
-static NSArray<NSString *> *PGDestructiveWords(void)
-{
-    return @[
-        @"Delete", @"Remove", @"Erase", @"Log Out", @"Logout", @"Sign Out", @"Reset", @"Clear",
-        @"删除", @"移除", @"抹掉", @"退出登录", @"登出", @"注销", @"清空", @"清除", @"重置"
+        @"稍后提醒我", @"稍后提醒", @"以后再说", @"暂不", @"忽略", @"Remind Me Tomorrow",
+        @"Cancelar", @"Ahora no", @"Cerrar", @"Más tarde", @"No gracias",
+        @"Agora não", @"Fechar", @"Mais tarde",
+        @"Annuler", @"Plus tard", @"Fermer", @"Non merci",
+        @"Abbrechen", @"Nicht jetzt", @"Schließen", @"Später",
+        @"キャンセル", @"後で", @"閉じる",
+        @"취소", @"나중에", @"닫기",
+        @"Annulla", @"Non ora", @"Chiudi", @"Più tardi",
+        @"Отмена", @"Не сейчас", @"Закрыть", @"Позже",
+        @"إلغاء", @"ليس الآن", @"إغلاق",
+        @"Batal", @"Nanti", @"Tutup",
+        @"İptal", @"Şimdi değil", @"Kapat",
+        @"Hủy", @"Để sau", @"Đóng",
+        @"ยกเลิก", @"ภายหลัง", @"ปิด",
+        @"रद्द करें", @"अभी नहीं", @"बंद", @"बंद करें"
     ];
 }
 
@@ -114,13 +103,22 @@ static NSArray<NSString *> *PGDestructiveWords(void)
 
 + (BOOL)tapPrompt:(XCUIElement *)container kind:(NSString *)kind origin:(XCUIApplication *)origin
 {
-    if(container == nil || ![container exists])
+    if(container == nil)
     {
         return NO;
     }
-    NSArray<XCUIElement *> *buttons = container.buttons.allElementsBoundByIndex;
-    XCUIElement *button = [self buttonToTap:buttons inContainer:container];
-    CGRect frame = button.exists ? button.frame : CGRectZero;
+    // A vanished alert records an XCTest failure when its buttons are queried. One snapshot either
+    // yields the buttons or says the alert is already gone, and @catch cannot clear that failure.
+    NSError *error = nil;
+    id<XCUIElementSnapshot> shot = [container snapshotWithError:&error];
+    if(shot == nil || shot.frame.size.width <= 0 || shot.frame.size.height <= 0)
+    {
+        return NO;
+    }
+    NSMutableArray<id<XCUIElementSnapshot>> *buttons = [NSMutableArray array];
+    [self collectFrom:shot into:buttons type:XCUIElementTypeButton];
+    id<XCUIElementSnapshot> button = [self buttonToTap:buttons inContainer:shot];
+    CGRect frame = button == nil ? CGRectZero : button.frame;
     if(button == nil || CGRectIsEmpty(frame))
     {
         return NO;
@@ -132,7 +130,19 @@ static NSArray<NSString *> *PGDestructiveWords(void)
     return YES;
 }
 
-+ (XCUIElement *)buttonToTap:(NSArray<XCUIElement *> *)buttons inContainer:(XCUIElement *)container
++ (void)collectFrom:(id<XCUIElementSnapshot>)node into:(NSMutableArray<id<XCUIElementSnapshot>> *)found type:(XCUIElementType)type
+{
+    if(node.elementType == type)
+    {
+        [found addObject:node];
+    }
+    for(id<XCUIElementSnapshot> child in node.children)
+    {
+        [self collectFrom:child into:found type:type];
+    }
+}
+
++ (id<XCUIElementSnapshot>)buttonToTap:(NSArray<id<XCUIElementSnapshot>> *)buttons inContainer:(id<XCUIElementSnapshot>)container
 {
     if(buttons.count == 0)
     {
@@ -142,21 +152,32 @@ static NSArray<NSString *> *PGDestructiveWords(void)
     {
         return [self firstButtonIn:buttons labels:PGDismissLabels()];
     }
-    XCUIElement *chosen = buttons.count > 2 ? buttons[1] : buttons.lastObject;
-    if([self label:chosen.label isOneOf:PGPaymentLabels()] || [self label:chosen.label isOneOf:PGInstallLabels()])
+    for(id<XCUIElementSnapshot> button in buttons)
     {
-        return [self firstButtonIn:buttons labels:PGDismissLabels()];
+        if([PGOverlayRules textIsPurchase:button.label] || [PGOverlayRules textIsInstall:button.label])
+        {
+            return [self firstButtonIn:buttons labels:PGDismissLabels()];
+        }
     }
-    if([self labelIsDestructive:chosen.label])
+    if(buttons.count <= 2)
     {
-        XCUIElement *dismiss = [self firstButtonIn:buttons labels:PGDismissLabels()];
+        id<XCUIElementSnapshot> dismiss = [self firstButtonIn:buttons labels:PGDismissLabels()];
         if(dismiss != nil)
         {
             return dismiss;
         }
-        for(XCUIElement *button in buttons)
+    }
+    id<XCUIElementSnapshot> chosen = buttons.count > 2 ? buttons[1] : buttons.lastObject;
+    if([PGOverlayRules textIsDestructive:chosen.label])
+    {
+        id<XCUIElementSnapshot> dismiss = [self firstButtonIn:buttons labels:PGDismissLabels()];
+        if(dismiss != nil)
         {
-            if(![self labelIsDestructive:button.label])
+            return dismiss;
+        }
+        for(id<XCUIElementSnapshot> button in buttons)
+        {
+            if(![PGOverlayRules textIsDestructive:button.label])
             {
                 return button;
             }
@@ -165,11 +186,20 @@ static NSArray<NSString *> *PGDestructiveWords(void)
     return chosen;
 }
 
-+ (BOOL)labelIsDestructive:(NSString *)label
++ (BOOL)containerOffersInstall:(NSArray<id<XCUIElementSnapshot>> *)buttons text:(id<XCUIElementSnapshot>)container
 {
-    for(NSString *word in PGDestructiveWords())
+    for(id<XCUIElementSnapshot> button in buttons)
     {
-        if(label.length > 0 && [label rangeOfString:word options:NSCaseInsensitiveSearch].location != NSNotFound)
+        if([PGOverlayRules textIsInstall:button.label])
+        {
+            return YES;
+        }
+    }
+    NSMutableArray<id<XCUIElementSnapshot>> *texts = [NSMutableArray array];
+    [self collectFrom:container into:texts type:XCUIElementTypeStaticText];
+    for(id<XCUIElementSnapshot> text in texts)
+    {
+        if([PGOverlayRules textIsInstall:text.label])
         {
             return YES;
         }
@@ -177,36 +207,9 @@ static NSArray<NSString *> *PGDestructiveWords(void)
     return NO;
 }
 
-+ (BOOL)containerOffersInstall:(NSArray<XCUIElement *> *)buttons text:(XCUIElement *)container
++ (BOOL)buttonsLookLikePasscode:(NSArray<id<XCUIElementSnapshot>> *)buttons
 {
-    for(XCUIElement *button in buttons)
-    {
-        if([self label:button.label isOneOf:PGInstallLabels()])
-        {
-            return YES;
-        }
-    }
-    NSArray<NSString *> *phrases = @[
-        @"Software Update", @"iOS Update", @"Update Available",
-        @"软件更新", @"系统更新", @"系统升级", @"iOS 更新"
-    ];
-    for(XCUIElement *text in container.staticTexts.allElementsBoundByIndex)
-    {
-        NSString *label = text.label ?: @"";
-        for(NSString *phrase in phrases)
-        {
-            if([label rangeOfString:phrase options:NSCaseInsensitiveSearch].location != NSNotFound)
-            {
-                return YES;
-            }
-        }
-    }
-    return NO;
-}
-
-+ (BOOL)buttonsLookLikePasscode:(NSArray<XCUIElement *> *)buttons
-{
-    for(XCUIElement *button in buttons)
+    for(id<XCUIElementSnapshot> button in buttons)
     {
         NSString *label = [button.label stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         if(label.length == 1 && [label rangeOfCharacterFromSet:[NSCharacterSet decimalDigitCharacterSet]].location != NSNotFound)
@@ -217,15 +220,21 @@ static NSArray<NSString *> *PGDestructiveWords(void)
     return NO;
 }
 
-+ (BOOL)containerAcceptsText:(XCUIElement *)container
++ (BOOL)containerAcceptsText:(id<XCUIElementSnapshot>)container
 {
-    return [container.textFields.firstMatch waitForExistenceWithTimeout:0]
-        || [container.secureTextFields.firstMatch waitForExistenceWithTimeout:0];
+    NSMutableArray<id<XCUIElementSnapshot>> *fields = [NSMutableArray array];
+    [self collectFrom:container into:fields type:XCUIElementTypeTextField];
+    if(fields.count > 0)
+    {
+        return YES;
+    }
+    [self collectFrom:container into:fields type:XCUIElementTypeSecureTextField];
+    return fields.count > 0;
 }
 
-+ (XCUIElement *)firstButtonIn:(NSArray<XCUIElement *> *)buttons labels:(NSArray<NSString *> *)labels
++ (id<XCUIElementSnapshot>)firstButtonIn:(NSArray<id<XCUIElementSnapshot>> *)buttons labels:(NSArray<NSString *> *)labels
 {
-    for(XCUIElement *button in buttons)
+    for(id<XCUIElementSnapshot> button in buttons)
     {
         if([self label:button.label isOneOf:labels])
         {

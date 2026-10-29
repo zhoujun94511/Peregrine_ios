@@ -1,6 +1,31 @@
 #import "PGActionFilter.h"
+#import "PGOverlayRules.h"
+
+static NSInteger PGShareSheetSeen;
+
+static BOOL PGNodeIsPurchase(PGElementNode *node)
+{
+    NSString *text = [NSString stringWithFormat:@"%@ %@ %@", node.label ?: @"", node.value ?: @"", node.identifier ?: @""];
+    // A price opens the system payment sheet. It is not a control to explore.
+    return [PGOverlayRules textIsPurchase:text] || [PGOverlayRules textHasPrice:text];
+}
+
+static BOOL PGNodeIsShareEntry(PGElementNode *node)
+{
+    if(PGShareSheetSeen < 1)
+    {
+        return NO;
+    }
+    NSString *text = [NSString stringWithFormat:@"%@ %@ %@", node.label ?: @"", node.value ?: @"", node.identifier ?: @""];
+    return [PGOverlayRules textIsShareEntry:text];
+}
 
 @implementation PGActionFilter
+
++ (void)noteShareSheetSeen
+{
+    PGShareSheetSeen = 1;
+}
 
 + (BOOL)includeNode:(PGElementNode *)node kind:(PGActionFilterKind)kind visits:(NSInteger)visits
 {
@@ -33,7 +58,7 @@
     {
         return valid;
     }
-    BOOL enabled = valid && (node.clickable || node.interactive);
+    BOOL enabled = valid && (node.clickable || node.interactive) && !PGNodeIsPurchase(node) && !PGNodeIsShareEntry(node);
     if(kind == PGActionFilterEnabled)
     {
         return enabled;

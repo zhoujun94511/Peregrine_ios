@@ -20,6 +20,7 @@ typedef NS_ENUM(NSInteger, PGCycleEscape) {
 // A state outside the stuck set means the escape worked and the ladder starts over.
 // After that restart, a later loop whose states all sit inside the restarted set waits 60
 // steps before another escape. The 101-decision restart meter is separate and is not cooled.
+// Named clickable controls that stay put count as one state, so a waving banner does not clear this window.
 @interface PGCycleGuard : NSObject
 @property (nonatomic, assign, readonly) NSInteger stepsSinceNewState;
 @property (nonatomic, copy, readonly) NSArray<NSString *> *recentStateKeys;
@@ -34,6 +35,8 @@ typedef NS_ENUM(NSInteger, PGCycleEscape) {
 // after the last step, recovery leaves that screen to the model for the rest of the run.
 // A restart that leaves the screen cools that fingerprint for 60 steps, so coming straight back
 // does not swipe, force back, or kill the app again.
+// A moving picture changes the pixel hash every step. When at least four clickable nodes have
+// identifiers, the signature is those identifiers. One node appearing or disappearing keeps it.
 @interface PGBlockRecovery : NSObject
 - (BOOL)matchesSignature:(NSString *)signature;
 - (nullable PGOperate *)noteSignature:(NSString *)signature allowsRestart:(BOOL)allowsRestart;
@@ -44,6 +47,16 @@ typedef NS_ENUM(NSInteger, PGCycleEscape) {
 // steps and the page name on corrected steps, so mixing the activity in would reset the streak.
 // Node paths are only index paths and would make every screen with the same node count match.
 + (NSString *)signatureForActivity:(nullable NSString *)activity fingerprint:(uint64_t)fingerprint;
+// Identified clickable controls. Empty identifiers are left out, so an unlabeled animation frame
+// does not change the set. Too few identified controls returns nil and the caller keeps the fingerprint.
++ (NSSet<NSString *> *)controlKeysInNodes:(nullable NSArray<PGElementNode *> *)nodes;
++ (nullable NSString *)controlSignatureForKeys:(nullable NSSet<NSString *> *)keys
+                                        anchor:(nullable NSSet<NSString *> *)anchor
+                                      keptKeys:(NSSet<NSString *> * _Nullable * _Nullable)keptKeys;
+// Uses the control signature while it exists, and the fingerprint otherwise.
+- (NSString *)signatureForNodes:(nullable NSArray<PGElementNode *> *)nodes
+                    fingerprint:(uint64_t)fingerprint
+                       activity:(nullable NSString *)activity;
 @end
 
 NS_ASSUME_NONNULL_END

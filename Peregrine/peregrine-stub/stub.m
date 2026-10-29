@@ -273,7 +273,42 @@ static PGStub* sharedStub = nil;
     {
         info[@"controller"] = controller;
     }
+    if([view isKindOfClass:[UITextField class]] && ((UITextField *)view).secureTextEntry)
+    {
+        info[@"value"] = @"";
+    }
+    else if([view isKindOfClass:[UITextView class]] && ((UITextView *)view).secureTextEntry)
+    {
+        info[@"value"] = @"";
+    }
+    if([self viewIsTallSheet:view])
+    {
+        info[@"sheet"] = @YES;
+    }
     return info;
+}
+
+// Same height rule as the XCTest sheet check. Only the view controller's own view is marked,
+// so a normal full-screen page does not look covered.
+- (BOOL)viewIsTallSheet:(UIView *)view
+{
+    UIViewController *controller = [self uiViewViewController:view];
+    if(controller == nil || controller.presentingViewController == nil)
+    {
+        return NO;
+    }
+    BOOL sheet = controller.modalPresentationStyle == UIModalPresentationPageSheet || controller.modalPresentationStyle == UIModalPresentationFormSheet;
+    if(@available(iOS 15.0, *))
+    {
+        sheet = sheet || [controller.presentationController isKindOfClass:[UISheetPresentationController class]];
+    }
+    if(!sheet)
+    {
+        return NO;
+    }
+    CGRect frame = [self screenRectOfView:view];
+    CGFloat height = [UIScreen mainScreen].bounds.size.height;
+    return height > 0 && frame.size.height >= height * 0.55;
 }
 
 #pragma mark - View facts
@@ -281,20 +316,19 @@ static PGStub* sharedStub = nil;
 - (NSArray<UIWindow *> *)applicationWindows
 {
     UIApplication *app = [UIApplication sharedApplication];
-    NSArray *windows = nil;
+    NSMutableArray<UIWindow *> *windows = [NSMutableArray array];
     if (@available(iOS 13.0, *)) {
         for(UIScene *scene in app.connectedScenes)
         {
-            if([scene isKindOfClass:[UIWindowScene class]])
+            if([scene isKindOfClass:[UIWindowScene class]] && scene.activationState != UISceneActivationStateUnattached)
             {
-                windows = ((UIWindowScene *)scene).windows;
-                break;
+                [windows addObjectsFromArray:((UIWindowScene *)scene).windows];
             }
         }
     } else {
-        windows = [app windows];
+        [windows addObjectsFromArray:app.windows];
     }
-    return windows ?: @[];
+    return windows;
 }
 
 - (NSArray<UIWindow *> *)contentWindows

@@ -4,7 +4,6 @@
 import json
 import os
 import re
-import shutil
 import signal
 import socket
 import subprocess
@@ -14,6 +13,7 @@ import threading
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 sys.dont_write_bytecode = True
@@ -24,7 +24,6 @@ from core import (  # noqa: E402
     DURATION_MAX,
     IOS_DIR,
     RUN_DIR,
-    STATE_PATH,
     SHOTS_MODES,
     STAMP_RE,
     TESTS,
@@ -42,6 +41,7 @@ from core import (  # noqa: E402
     probe_stub,
     prune_runs,
     pull_device_files,
+    pull_report,
     run_artifacts,
     run_command,
     run_paths,
@@ -62,6 +62,8 @@ INDEX_PATH = os.path.join(WEB_DIR, "index.html")
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8765
 LOG_LIMIT = 200000
+START_BODY_LIMIT = 65536
+STATE_PATH = os.path.join(RUN_DIR, "launch-state.json")
 
 
 def listen_address():
@@ -114,6 +116,11 @@ def load_state():
         "logPath": data.get("logPath") if isinstance(data.get("logPath"), str) else "",
         "stamp": stamp,
         "test": data.get("test") if data.get("test") in TESTS else "explore",
+        "shots": data.get("shots") if data.get("shots") in SHOTS_MODES else "off",
+        "perf": bool(data.get("perf")),
+        # Missing means a state file written before resume-collect. Do not pull again.
+        "collected": True if "collected" not in data else bool(data.get("collected")),
+        "since": str(data.get("since") or ""),
     }
 
 
@@ -153,16 +160,67 @@ class Session:
     def _adopt(self):
         pid = self.prefs.get("pid") or 0
         command = process_command(pid)
-        xcode = "xcodebuild" in command and "PeregrineRunner" in command
-        if not xcode and "runtest.py" not in command:
+        alive = ("xcodebuild" in command and "PeregrineRunner" in command) or "runtest.py" in command
+        if alive:
+            self.exit_code = None
+            self.proc = _AdoptedProcess(pid)
+            log_path = self.prefs.get("logPath") or ""
+            if os.path.isfile(log_path):
+                with open(log_path, "r", encoding="utf-8", errors="replace") as handle:
+                    self.log = handle.read()[-LOG_LIMIT:]
+        else:
             self.prefs["pid"] = 0
+            self.proc = None
+        if self._should_collect_locked():
+            self._start_collect_thread(self.proc)
+
+    def _should_collect_locked(self):
+        prefs = self.prefs
+        stamp = prefs.get("stamp") or ""
+        return (
+            not prefs.get("collected")
+            and prefs.get("test") == "explore"
+            and bool(STAMP_RE.match(stamp))
+            and is_target(prefs.get("udid") or "")
+            and BUNDLE_RE.match(prefs.get("bundleId") or "") is not None
+        )
+
+    def _start_collect_thread(self, proc):
+        paths = run_paths(self.prefs["stamp"])
+        crash = {
+            "udid": self.prefs["udid"],
+            "bundleId": self.prefs["bundleId"],
+            "since": self.prefs.get("since") or str(time.time()),
+            "out": paths["crash"],
+            "deviceOut": paths["device"],
+            "hostPerf": None,
+            "perf": bool(self.prefs.get("perf")),
+        }
+        log_path = self.prefs.get("logPath") or paths["log"]
+        thread = threading.Thread(target=self._collect_when_done, args=(proc, log_path, crash), daemon=True)
+        thread.start()
+
+    def _collect_when_done(self, proc, log_path, crash):
+        if proc is not None:
+            proc.wait()
+        with self.lock:
+            if self.prefs.get("collected"):
+                return
+            self.collecting = crash is not None
+            if self.proc is proc:
+                self._finish_locked()
+        if crash is None:
             return
-        self.exit_code = None
-        self.proc = _AdoptedProcess(pid)
-        log_path = self.prefs.get("logPath") or ""
-        if os.path.isfile(log_path):
-            with open(log_path, "r", encoding="utf-8", errors="replace") as handle:
-                self.log = handle.read()[-LOG_LIMIT:]
+        try:
+            self._append_log(log_path, "\nlaunch resumed collect\n")
+            if crash.get("perf"):
+                self._append_log(log_path, "perf host skipped: 启动页重启后采样进程已经不在\n")
+            self._pull_device_files(log_path, crash)
+            if crash.get("perf"):
+                self._append_log(log_path, perf_report_line(crash["deviceOut"]) + "\n")
+            self._collect_crashes(log_path, crash)
+        finally:
+            self._mark_collected()
 
     def status(self):
         with self.lock:
@@ -373,6 +431,8 @@ class Session:
             "test": test,
             "shots": shots if test == "explore" else self.prefs.get("shots") or "off",
             "perf": perf if test == "explore" else bool(self.prefs.get("perf")),
+            "collected": test != "explore",
+            "since": str(time.time()) if test == "explore" else "",
             "stubCheck": stub_check,
         }
         save_state(self.prefs)
@@ -381,7 +441,7 @@ class Session:
             crash = {
                 "udid": udid,
                 "bundleId": bundle_id,
-                "since": str(time.time()),
+                "since": self.prefs["since"],
                 "out": paths["crash"],
                 "deviceOut": paths["device"],
                 "hostPerf": host_perf,
@@ -398,8 +458,8 @@ class Session:
 
     def _pull_device_files(self, log_path, crash):
         try:
-            copied = pull_device_files(crash["udid"], crash["bundleId"], crash["deviceOut"])
-            line = "device files success %s\n" % " ".join(copied)
+            copied, missing = pull_device_files(crash["udid"], crash["bundleId"], crash["deviceOut"])
+            line = pull_report(copied, missing)
         except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
             line = "device files failed: %s\n" % exc
         self._append_log(log_path, "\n" + line)
@@ -476,8 +536,13 @@ class Session:
                 self._append_log(log_path, perf_report_line(crash["deviceOut"]) + "\n")
             self._collect_crashes(log_path, crash)
         finally:
-            with self.lock:
-                self.collecting = False
+            self._mark_collected()
+
+    def _mark_collected(self):
+        with self.lock:
+            self.collecting = False
+            self.prefs["collected"] = True
+            save_state(self.prefs)
 
     def _finish_locked(self):
         if self.proc is not None:
@@ -521,16 +586,19 @@ RUNNER = Session()
 
 # noinspection PyPep8Naming
 class Handler(BaseHTTPRequestHandler):
+    def __init__(self, request: Any, client_address: Any, server: ThreadingHTTPServer) -> None:
+        super().__init__(request, client_address, server)
+
     def do_GET(self):
         path = urlparse(self.path).path
         static = {
             "/": (INDEX_PATH, "text/html; charset=utf-8"),
             "/launch.css": (os.path.join(WEB_DIR, "launch.css"), "text/css; charset=utf-8"),
             "/launch.js": (os.path.join(WEB_DIR, "launch.js"), "text/javascript; charset=utf-8"),
-            "/pic/favicon.svg": (os.path.join(WEB_DIR, "pic", "favicon.svg"), "image/svg+xml"),
-            "/pic/favicon-32.png": (os.path.join(WEB_DIR, "pic", "favicon-32.png"), "image/png"),
-            "/pic/apple-touch-icon.png": (os.path.join(WEB_DIR, "pic", "apple-touch-icon.png"), "image/png"),
-            "/favicon.ico": (os.path.join(WEB_DIR, "pic", "favicon-32.png"), "image/png"),
+            "/favicon.svg": (os.path.join(WEB_DIR, "favicon.svg"), "image/svg+xml"),
+            "/favicon-32.png": (os.path.join(WEB_DIR, "favicon-32.png"), "image/png"),
+            "/favicon.ico": (os.path.join(WEB_DIR, "favicon-32.png"), "image/png"),
+            "/apple-touch-icon.png": (os.path.join(WEB_DIR, "apple-touch-icon.png"), "image/png"),
         }
         if path in static:
             self._send_file(*static[path])
@@ -586,12 +654,25 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(200, {"apps": apps})
 
     def _start(self):
-        length = int(self.headers.get("Content-Length") or "0")
+        try:
+            length = int(self.headers.get("Content-Length") or "0")
+        except (TypeError, ValueError):
+            self._send_json(400, {"error": "Content-Length 不是整数"})
+            return
+        if length < 0:
+            self._send_json(400, {"error": "Content-Length 不能为负数"})
+            return
+        if length > START_BODY_LIMIT:
+            self._send_json(413, {"error": "请求体过大"})
+            return
         raw = self.rfile.read(length) if length > 0 else b"{}"
         try:
             payload = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send_json(400, {"error": "请求不是 JSON"})
+            return
+        if not isinstance(payload, dict):
+            self._send_json(400, {"error": "请求必须是 JSON 对象"})
             return
         try:
             status = RUNNER.start(
@@ -657,7 +738,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(size))
             self.send_header("Content-Disposition", 'attachment; filename="peregrine-run-%s.zip"' % stamp)
             self.end_headers()
-            shutil.copyfileobj(handle, self.wfile)
+            while True:
+                chunk = handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
 
     def _send_file(self, path, content_type):
         try:

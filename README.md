@@ -261,7 +261,7 @@ python3 tools/launch/cli.py install
 - `tools/launch/.run/`：隧道日志 `tunnel.log`，以及 Mac 上的 install 日志。删掉这个目录不会重新下载。
 - `tools/launch/.local/rounds/run-<时间>/`：这一轮的日志、`device/`、`crash/` 和导出 zip 放在同一个目录里。
 - 启动页的「打包导出」把本轮的运行日志、`.xcresult`、崩溃报告和设备结果文件打成一个 zip 下载；「导出日志」只下载运行日志。
-- `tools/launch/.local/rounds/run-<时间>/crash/crash-report.md`：本轮的崩溃报告，包括崩溃类型、次数、调用栈和崩溃前的操作。`cli.py run` 会自动生成；直接调用 `xcodebuild` 时可用 `tools/crash/collect.py` 生成，见[使用手册](Doc/handbook-cn.md#崩溃与异常)。
+- `tools/launch/.local/rounds/run-<时间>/crash/crash-report.md`：本轮的崩溃报告，开头是测试机型和被测应用，其后包括崩溃类型、次数、调用栈和崩溃前的操作。`cli.py run` 会自动生成；直接调用 `xcodebuild` 时可用 `tools/crash/collect.py` 生成，见[使用手册](Doc/handbook-cn.md#崩溃与异常)。
 
 ## 配置与扩展
 
@@ -273,6 +273,7 @@ python3 tools/launch/cli.py install
 - `PEREGRINE_UI_SOURCE`：界面来源模式，可选 `combined`、`screenshot` 或 `snapshot`。
 - `PEREGRINE_DATAPORT`：可选插桩控件树的数据端口。经启动页或 `cli.py run` 启动时，开跑前先检测被测应用是否接入插桩，未接入时本轮不传该端口。
 - `PEREGRINE_COMMAND_PORT`：可选外部 JSON 操作命令端口。
+- `PEREGRINE_NETWORK_PROBE_URL`：网络检查使用的 HTTP(S) 地址；未设置时使用 Apple captive portal 检查地址。
 
 页面限制、操作序列和用例步骤等更详细的配置方式，请参阅[使用手册](Doc/handbook-cn.md)。插桩接入方式、端口传递和协议说明请参阅[插桩接入文档](Doc/插桩接入.md)。
 

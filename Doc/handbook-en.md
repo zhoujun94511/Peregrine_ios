@@ -285,7 +285,7 @@ The report directory contains:
 
 | File                | Contents                                                                                                                                                                                    |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `crash-report.md`   | Summary table; each crash site's type, count, time, reason, crashing-thread stack, and the actions before it; process exits with no system log; action timeouts and the actions before them |
+| `crash-report.md`   | Test device (name, model, system, UDID) and app under test (name, bundle ID, version); summary table; each crash site's type, count, time, reason, crashing-thread stack, and the actions before it; process exits with no system log; action timeouts and the actions before them |
 | `crash-report.json` | The same data, structured                                                                                                                                                                   |
 | `reports/`          | Raw `.ips` logs, openable in Xcode                                                                                                                                                          |
 

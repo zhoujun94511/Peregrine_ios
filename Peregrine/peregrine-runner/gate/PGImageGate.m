@@ -5,7 +5,12 @@ static NSArray<NSString *> *PGImageWords(void)
 {
     return @[
         @"预览", @"大图", @"缩放", @"图片", @"相册",
-        @"preview", @"zoom", @"lightbox", @"gallery", @"photo viewer", @"qlpreview", @"imageviewer"
+        @"preview", @"zoom", @"lightbox", @"gallery", @"photo viewer", @"qlpreview", @"imageviewer",
+        @"foto", @"galería", @"galeria", @"pré-visualização", @"pre-visualizacao", @"visualização", @"visualizacao",
+        @"aperçu", @"apercu", @"galerie", @"vorschau",
+        @"写真", @"アルバム", @"사진", @"갤러리", @"galleria",
+        @"фото", @"галерея", @"صورة", @"ألبوم", @"galeri",
+        @"ảnh", @"thư viện", @"รูปภาพ", @"फ़ोटो"
     ];
 }
 
@@ -14,6 +19,14 @@ static NSArray<NSString *> *PGImageCloseWords(void)
     return @[
         @"关闭", @"完成", @"返回", @"取消", @"收起",
         @"close", @"done", @"back", @"cancel", @"dismiss",
+        @"cerrar", @"listo", @"volver", @"fechar", @"voltar", @"pronto",
+        @"fermer", @"retour", @"terminé", @"termine",
+        @"schließen", @"schliessen", @"zurück", @"zurueck", @"fertig",
+        @"閉じる", @"完了", @"戻る", @"닫기", @"완료", @"뒤로",
+        @"chiudi", @"fatto", @"indietro", @"закрыть", @"готово", @"назад",
+        @"إغلاق", @"رجوع", @"tutup", @"kembali", @"selesai",
+        @"kapat", @"geri", @"bitti", @"đóng", @"quay lại", @"xong",
+        @"ปิด", @"กลับ", @"เสร็จ", @"बंद", @"वापस",
         @"×", @"✕", @"✖"
     ];
 }
@@ -22,7 +35,20 @@ static NSArray<NSString *> *PGImageAvoidWords(void)
 {
     return @[
         @"分享", @"保存", @"删除", @"收藏", @"编辑", @"下载", @"发送",
-        @"share", @"save", @"delete", @"favorite", @"edit", @"download", @"send", @"like"
+        @"share", @"save", @"delete", @"favorite", @"edit", @"download", @"send", @"like",
+        @"compartir", @"guardar", @"eliminar", @"borrar", @"descargar", @"favorito", @"editar", @"enviar",
+        @"compartilhar", @"salvar", @"excluir", @"baixar",
+        @"partager", @"enregistrer", @"supprimer", @"télécharger", @"telecharger",
+        @"teilen", @"speichern", @"löschen", @"loeschen", @"herunterladen",
+        @"共有", @"保存", @"削除", @"ダウンロード", @"공유", @"저장", @"삭제", @"다운로드",
+        @"condividi", @"salva", @"elimina", @"scarica",
+        @"поделиться", @"сохранить", @"удалить", @"скачать",
+        @"مشاركة", @"حفظ", @"حذف", @"تحميل",
+        @"bagikan", @"simpan", @"hapus", @"unduh",
+        @"paylaş", @"kaydet", @"sil", @"indir",
+        @"chia sẻ", @"lưu", @"xóa", @"tải",
+        @"แชร์", @"บันทึก", @"ลบ", @"ดาวน์โหลด",
+        @"साझा", @"सहेजें", @"हटाएं"
     ];
 }
 
@@ -31,6 +57,7 @@ static NSArray<NSString *> *PGImageAvoidWords(void)
     uint64_t _fingerprint;
     NSInteger _repeats;
     NSInteger _streak;
+    BOOL _gaveUp;
     NSArray<PGElementNode *> *_snapshotNodes;
     uint64_t _snapshotFingerprint;
     NSInteger _snapshotSkip;
@@ -48,10 +75,15 @@ static NSArray<NSString *> *PGImageAvoidWords(void)
         _fingerprint = screen.fingerprint;
         _repeats = 1;
         _streak = 0;
+        _gaveUp = NO;
     }
     else
     {
         _repeats += 1;
+    }
+    if(_gaveUp)
+    {
+        return decision;
     }
     BOOL points = screen.usePoints;
     CGSize space = points ? screen.screenSize : screen.pixelSize;
@@ -66,7 +98,7 @@ static NSArray<NSString *> *PGImageAvoidWords(void)
         named = [self nodesNamedImage:nodes];
     }
     space = [self space:space coveringNodes:nodes];
-    if(!named && !sparse && _repeats < 2)
+    if(!named && !sparse)
     {
         return decision;
     }
@@ -78,6 +110,7 @@ static NSArray<NSString *> *PGImageAvoidWords(void)
     _streak += 1;
     if(_streak >= 3)
     {
+        _gaveUp = YES;
         decision.action = PGOverlayActionForeground;
         NSLog(@"image zoom step %ld foreground", (long)_streak);
         return decision;

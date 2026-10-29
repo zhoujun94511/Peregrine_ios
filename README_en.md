@@ -261,7 +261,7 @@ After a run, inspect:
 - `tools/launch/.run/` — `tunnel.log`, and install logs on a Mac. Deleting this directory does not download anything again.
 - `tools/launch/.local/rounds/run-<time>/` — that run's log, `device/`, `crash/`, and export zip live in one directory.
 - In the launcher, **打包导出** (export bundle) downloads one zip with the run log, `.xcresult`, crash report, and device result files of the run; **导出日志** (export log) downloads the run log only.
-- `tools/launch/.local/rounds/run-<time>/crash/crash-report.md` — the crash report of the run, including crash types, counts, call stacks, and the steps before each crash. `cli.py run` writes it automatically; for direct `xcodebuild` runs, generate it with `tools/crash/collect.py`; see the [handbook](Doc/handbook-en.md#crashes-and-anomalies).
+- `tools/launch/.local/rounds/run-<time>/crash/crash-report.md` — the crash report of the run. It starts with the test device and the app under test, then crash types, counts, call stacks, and the steps before each crash. `cli.py run` writes it automatically; for direct `xcodebuild` runs, generate it with `tools/crash/collect.py`; see the [handbook](Doc/handbook-en.md#crashes-and-anomalies).
 
 ## Configuration and Extensibility
 
@@ -273,6 +273,7 @@ Common configuration variables include:
 - `PEREGRINE_UI_SOURCE` — UI source mode: `combined`, `screenshot`, or `snapshot`.
 - `PEREGRINE_DATAPORT` — optional data port for instrumented view-tree access. When started from the launch page or `cli.py run`, the target app is checked for the stub first; if it does not answer on the port, the port is not passed for that run.
 - `PEREGRINE_COMMAND_PORT` — optional port for external JSON actions.
+- `PEREGRINE_NETWORK_PROBE_URL` — HTTP(S) address used by the network check. When unset, the Apple captive portal address is used.
 
 For detailed options covering page constraints, action sequences, and test steps, see the [handbook](Doc/handbook-en.md). For instrumentation setup, port passing, and protocol details, see the [instrumentation guide](Doc/instrumentation.md).
 

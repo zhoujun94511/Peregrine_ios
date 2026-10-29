@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# noinspection SpellCheckingInspection,GrazieInspection
 """Pulls the crash and jetsam reports of the app under test for one run, groups them by
 stack signature, and attaches the steps Peregrine logged before each one.
 
@@ -11,9 +12,11 @@ PEREGRINE_BACKEND=goios (the ios command on PATH, or GO_IOS).
 
 import argparse
 import csv
+import importlib.util
 import io
 import json
 import os
+import pathlib
 import re
 import shutil
 import subprocess
@@ -22,8 +25,8 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 
-ANOMALY_RE = re.compile(r"peregrine anomaly (\{.*})\s*$")
-STEP_RE = re.compile(r"peregrine anomaly step (\{.*})\s*$")
+ANOMALY_RE = re.compile(r"peregrine anomaly ({.*})\s*$")
+STEP_RE = re.compile(r"peregrine anomaly step ({.*})\s*$")
 SUMMARY_RE = re.compile(r"anomaly summary ((?:[a-z_]+ \d+ ?)+)\s*$")
 CRASH_KINDS = ("suspected_crash", "suspected_crash_restart")
 NOISE_IMAGES = {
@@ -46,20 +49,7 @@ WATCHDOG_CODE = 0x8BADF00D
 
 def run(args, timeout):
     try:
-        if os.name == "nt":
-            completed = subprocess.run(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout,
-                check=False,
-            )
-        else:
-            completed = subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout, check=False
-            )
+        completed = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 1, "", str(exc)
     return completed.returncode, completed.stdout, completed.stderr
@@ -91,7 +81,18 @@ def local_text(moment):
 def go_ios():
     if os.environ.get("PEREGRINE_BACKEND") != "goios":
         return ""
-    return os.environ.get("GO_IOS", "").strip() or shutil.which("ios") or "ios"
+    chosen = os.environ.get("GO_IOS", "").strip()
+    if chosen:
+        return chosen
+    names = ("ios.exe", "ios") if os.name == "nt" else ("ios",)
+    for folder in os.environ.get("PATH", "").split(os.pathsep):
+        if not folder:
+            continue
+        for name in names:
+            candidate = pathlib.Path(folder) / name
+            if candidate.is_file():
+                return str(candidate)
+    return "ios"
 
 
 def device_flags(udid):
@@ -101,22 +102,109 @@ def device_flags(udid):
     return [] if udid in usb.split() else ["-n"]
 
 
-def executable_name(udid, bundle_id, flags):
+def product_marketing_name(product_type):
+    key = (product_type or "").strip()
+    if not key:
+        return ""
+    path = pathlib.Path(__file__).resolve().parents[1] / "launch" / "models.py"
+    spec = importlib.util.spec_from_file_location("peregrine_device_models", path)
+    if spec is None or spec.loader is None:
+        return key
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    names = getattr(module, "MARKETING_NAMES", None)
+    if not isinstance(names, dict):
+        return key
+    found = names.get(key, key)
+    return found if isinstance(found, str) else key
+
+
+def json_value(text, opener):
+    line = next((item for item in reversed((text or "").splitlines()) if item.strip().startswith(opener)), "")
+    if not line:
+        return None
+    try:
+        return json.loads(line)
+    except ValueError:
+        return None
+
+
+def idevice_value(udid, flags, key):
+    code, text, _ = run(["ideviceinfo", "-u", udid, *flags, "-k", key], 20)
+    if code != 0:
+        return ""
+    return text.strip()
+
+
+def device_record(udid, flags):
+    """Name, marketing model, and iOS version of the phone this run used."""
+    record = {"name": "", "model": "", "system": "", "udid": udid}
+    if go_ios():
+        code, text, _ = run([go_ios(), "info", "--udid=%s" % udid], 30)
+        info = json_value(text, "{") if code == 0 else None
+        info = info if isinstance(info, dict) else {}
+        product = info.get("ProductType") or ""
+        record["name"] = info.get("DeviceName") or ""
+        record["system"] = info.get("ProductVersion") or ""
+        record["model"] = product_marketing_name(product) if product else ""
+        return record
+    record["name"] = idevice_value(udid, flags, "DeviceName")
+    record["system"] = idevice_value(udid, flags, "ProductVersion")
+    product = idevice_value(udid, flags, "ProductType")
+    record["model"] = product_marketing_name(product) if product else ""
+    return record
+
+
+def app_record(udid, bundle_id, flags):
+    """Display name, version, and executable of the app under test."""
+    record = {"name": "", "bundle_id": bundle_id, "version": "", "build": "", "executable": ""}
     if go_ios():
         code, text, _ = run([go_ios(), "apps", "--udid=%s" % udid], 60)
-        line = next((line for line in reversed(text.splitlines()) if line.startswith("[")), "[]") if code == 0 else "[]"
-        try:
-            apps = json.loads(line)
-        except ValueError:
-            apps = []
-        return next((app.get("CFBundleExecutable") or "" for app in apps if app.get("CFBundleIdentifier") == bundle_id), "")
+        apps = json_value(text, "[") if code == 0 else None
+        apps = apps if isinstance(apps, list) else []
+        item = next((app for app in apps if isinstance(app, dict) and app.get("CFBundleIdentifier") == bundle_id), {})
+        record["name"] = item.get("CFBundleDisplayName") or item.get("CFBundleName") or ""
+        record["version"] = item.get("CFBundleShortVersionString") or ""
+        record["build"] = item.get("CFBundleVersion") or ""
+        record["executable"] = item.get("CFBundleExecutable") or ""
+        return record
+    code, text, _ = run([
+        "ideviceinstaller", "-u", udid, *flags, "list", "--user",
+        "-a", "CFBundleIdentifier",
+        "-a", "CFBundleDisplayName",
+        "-a", "CFBundleName",
+        "-a", "CFBundleShortVersionString",
+        "-a", "CFBundleVersion",
+        "-a", "CFBundleExecutable",
+    ], 60)
+    if code != 0:
+        record["executable"] = executable_only(udid, bundle_id, flags)
+        return record
+    for row in csv.reader(io.StringIO(text.replace(', "', ',"'))):
+        cells = [cell.strip().strip('"') for cell in row]
+        if len(cells) >= 6 and cells[0] == bundle_id:
+            record["name"] = cells[1] or cells[2]
+            record["version"] = cells[3]
+            record["build"] = cells[4]
+            record["executable"] = cells[5]
+            return record
+    record["executable"] = executable_only(udid, bundle_id, flags)
+    return record
+
+
+def executable_only(udid, bundle_id, flags):
     code, text, _ = run(["ideviceinstaller", "-u", udid, *flags, "list", "--user", "-a", "CFBundleIdentifier", "-a", "CFBundleExecutable"], 60)
     if code != 0:
         return ""
     for row in csv.reader(io.StringIO(text.replace(', "', ',"'))):
-        if len(row) >= 2 and row[0].strip().strip('"') == bundle_id:
-            return row[1].strip().strip('"')
+        cells = [cell.strip().strip('"') for cell in row]
+        if len(cells) >= 2 and cells[0] == bundle_id:
+            return cells[1]
     return ""
+
+
+def executable_name(udid, bundle_id, flags):
+    return app_record(udid, bundle_id, flags)["executable"]
 
 
 def pull_reports(udid, flags, destination):
@@ -147,6 +235,8 @@ def read_report(path):
 
 def frame_text(frame, images):
     image = images[frame["imageIndex"]] if 0 <= frame.get("imageIndex", -1) < len(images) else {}
+    if not isinstance(image, dict):
+        image = {}
     name = image.get("name") or "?"
     if frame.get("symbol"):
         return name, "%s %s + %s" % (name, frame["symbol"], frame.get("symbolLocation", 0))
@@ -159,7 +249,8 @@ def crash_frames(body):
     if not frames:
         threads = body.get("threads") or []
         index = body.get("faultingThread", 0)
-        frames = threads[index].get("frames", []) if 0 <= index < len(threads) else []
+        thread = threads[index] if 0 <= index < len(threads) else None
+        frames = thread.get("frames", []) if isinstance(thread, dict) else []
     return [frame_text(frame, images) + (frame.get("symbol") or "",) for frame in frames]
 
 
@@ -214,11 +305,12 @@ def signature(type_label, frames):
 
 def collect_reports(directory, bundle_id, executable, since, until):
     crashes = []
-    for name in sorted(os.listdir(directory)):
+    folder = directory if isinstance(directory, str) else os.fsdecode(directory)
+    for name in sorted(os.listdir(folder)):
         if not name.endswith(".ips"):
             continue
-        path = os.path.join(directory, name)
-        header, body = read_report(path)
+        report_path = str(pathlib.Path(folder) / name)
+        header, body = read_report(report_path)
         if header is None or body is None:
             continue
         try:
@@ -234,7 +326,7 @@ def collect_reports(directory, bundle_id, executable, since, until):
                 "kind": "crash",
                 "time": moment,
                 "file": name,
-                "path": path,
+                "path": report_path,
                 "type": label,
                 "exception": body.get("exception") or {},
                 "termination": (body.get("termination") or {}).get("indicator", ""),
@@ -244,15 +336,16 @@ def collect_reports(directory, bundle_id, executable, since, until):
             })
         elif header.get("bug_type") == "298" and executable:
             for process in body.get("processes") or []:
-                name = process.get("name") or ""
-                # Jetsam truncates long process names.
-                if name and executable.startswith(name) and process.get("reason"):
+                process_name = process.get("name") or ""
+                # Jetsam truncates long process names. Keep the .ips name so two
+                # events for the same executable do not overwrite one report file.
+                if process_name and executable.startswith(process_name) and process.get("reason"):
                     label = "内存超限被系统结束（Jetsam %s）" % process["reason"]
                     crashes.append({
                         "kind": "jetsam",
                         "time": moment,
                         "file": name,
-                        "path": path,
+                        "path": report_path,
                         "type": label,
                         "exception": {},
                         "termination": "",
@@ -264,12 +357,12 @@ def collect_reports(directory, bundle_id, executable, since, until):
     return crashes
 
 
-def read_runner_log(path):
+def read_runner_log(log_path):
     anomalies = []
     summary = {}
-    if not path or not os.path.isfile(path):
+    if not log_path or not os.path.isfile(log_path):
         return anomalies, summary
-    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+    with open(log_path, "r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
             step = STEP_RE.search(line)
             if step:
@@ -329,18 +422,56 @@ def steps_rows(steps):
     return rows
 
 
-def write_report(out, bundle_id, since, until, crashes, groups, unmatched, summary, timeouts):
+def table_rows(pairs):
+    rows = ["| 项目 | 内容 |", "| --- | --- |"]
+    for label, value in pairs:
+        text = value if isinstance(value, str) else ""
+        if text:
+            rows.append("| %s | %s |" % (label, text.replace("|", "\\|")))
+    return rows
+
+
+def version_text(app):
+    version = app.get("version") or ""
+    build = app.get("build") or ""
+    if version and build:
+        return "%s (%s)" % (version, build)
+    return version or build
+
+
+def write_report(out, bundle_id, since, until, crashes, groups, unmatched, summary, timeouts, device, app):
     reports_dir = os.path.join(out, "reports")
     os.makedirs(reports_dir, exist_ok=True)
     for crash in crashes:
         shutil.copy2(crash["path"], os.path.join(reports_dir, crash["file"]))
+    crash_count = sum(1 for crash in crashes if crash["kind"] == "crash")
+    jetsam_count = sum(1 for crash in crashes if crash["kind"] == "jetsam")
+    counted = []
+    if isinstance(summary, dict):
+        for kind in CRASH_KINDS:
+            value = summary.get(kind, 0)
+            counted.append(value if isinstance(value, int) else 0)
+    runner_exits = sum(counted)
+    raw_timeouts = summary.get("action_timeout", 0) if isinstance(summary, dict) else 0
+    action_timeouts = raw_timeouts if isinstance(raw_timeouts, int) else 0
+    since_text = local_text(since)
+    until_text = local_text(until)
+    device_info = {key: device.get(key) or "" for key in ("name", "model", "system", "udid")}
+    app_info = {
+        "name": app.get("name") or "",
+        "bundle_id": app.get("bundle_id") or bundle_id,
+        "version": app.get("version") or "",
+        "build": app.get("build") or "",
+    }
     data = {
         "bundle_id": bundle_id,
-        "since": local_text(since),
-        "until": local_text(until),
+        "device": device_info,
+        "app": app_info,
+        "since": since_text,
+        "until": until_text,
         "runner": summary,
-        "crash_count": sum(1 for crash in crashes if crash["kind"] == "crash"),
-        "jetsam_count": sum(1 for crash in crashes if crash["kind"] == "jetsam"),
+        "crash_count": crash_count,
+        "jetsam_count": jetsam_count,
         "groups": [
             {
                 "type": items[0]["type"],
@@ -363,26 +494,50 @@ def write_report(out, bundle_id, since, until, crashes, groups, unmatched, summa
     lines = [
         "# 崩溃报告",
         "",
-        "被测应用 `%s`，时间 %s 至 %s。" % (bundle_id, data["since"], data["until"]),
+        "## 测试机型",
+        "",
+        *table_rows([
+            ("名称", device_info["name"]),
+            ("机型", device_info["model"]),
+            ("系统", device_info["system"]),
+            ("UDID", device_info["udid"]),
+        ]),
+        "",
+        "## 被测应用",
+        "",
+        *table_rows([
+            ("名称", app_info["name"]),
+            ("Bundle ID", app_info["bundle_id"]),
+            ("版本", version_text(app_info)),
+        ]),
+        "",
+        "时间 %s 至 %s。" % (since_text, until_text),
         "",
         "| 项目 | 次数 |",
         "| --- | --- |",
-        "| 崩溃日志 | %d |" % data["crash_count"],
-        "| 内存超限 | %d |" % data["jetsam_count"],
+        "| 崩溃日志 | %d |" % crash_count,
+        "| 内存超限 | %d |" % jetsam_count,
         "| 不同崩溃点 | %d |" % len(groups),
-        "| Runner 检测到进程退出 | %d |" % sum(summary.get(kind, 0) for kind in CRASH_KINDS),
-        "| 动作超时 | %d |" % summary.get("action_timeout", 0),
+        "| Runner 检测到进程退出 | %d |" % runner_exits,
+        "| 动作超时 | %d |" % action_timeouts,
         "",
     ]
-    for number, entry in enumerate(data["groups"], 1):
-        lines += ["## %d. %s（%d 次）" % (number, entry["type"], entry["count"]), ""]
-        lines.append("时间：%s。日志：%s。" % ("、".join(entry["times"]), "、".join("`%s`" % path for path in entry["files"])))
-        if entry["message"]:
-            lines += ["", "系统信息：%s" % entry["message"]]
-        if entry["frames"]:
-            lines += ["", "```text"] + entry["frames"] + ["```"]
-        if entry["steps"]:
-            lines += ["", "崩溃前的操作："] + [""] + steps_rows(entry["steps"])
+    for number, items in enumerate(groups, 1):
+        head = items[0]
+        label = head.get("type") if isinstance(head, dict) else ""
+        times = [local_text(item["time"]) for item in items]
+        files = ["reports/" + item["file"] for item in items]
+        message = head.get("message") if isinstance(head, dict) else ""
+        frames = head.get("frames") if isinstance(head, dict) else []
+        steps = next((item["steps"] for item in items if item.get("steps")), [])
+        lines += ["## %d. %s（%d 次）" % (number, label if isinstance(label, str) else "", len(items)), ""]
+        lines.append("时间：%s。日志：%s。" % ("、".join(times), "、".join("`%s`" % name for name in files)))
+        if message:
+            lines += ["", "系统信息：%s" % message]
+        if frames:
+            lines += ["", "```text"] + list(frames) + ["```"]
+        if steps:
+            lines += ["", "崩溃前的操作："] + [""] + steps_rows(steps)
         lines.append("")
     if data["exits_without_report"]:
         lines += ["## 进程退出但没有找到系统日志", "", "可能是被系统正常回收、被其他进程结束，或日志还没写出。", ""]
@@ -399,7 +554,7 @@ def write_report(out, bundle_id, since, until, crashes, groups, unmatched, summa
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument("--udid", required=True)
     parser.add_argument("--bundle-id", required=True)
     parser.add_argument("--since", required=True, help="local time 'YYYY-MM-DD HH:MM:SS' or epoch seconds")
@@ -414,7 +569,9 @@ def main():
         time.sleep(args.settle)
     until = parse_time(args.until) if args.until else datetime.now(timezone.utc)
     flags = device_flags(args.udid)
-    executable = executable_name(args.udid, args.bundle_id, flags)
+    target_app = app_record(args.udid, args.bundle_id, flags)
+    target_device = device_record(args.udid, flags)
+    executable = target_app["executable"]
     anomalies, summary = read_runner_log(args.log)
     os.makedirs(args.out, exist_ok=True)
     pulled = tempfile.mkdtemp(prefix="pull-", dir=args.out)
@@ -428,14 +585,27 @@ def main():
         unmatched = match_steps(crashes, anomalies)
         groups = group(crashes)
         timeouts = [item for item in anomalies if item.get("kind") == "action_timeout"]
-        data = write_report(args.out, args.bundle_id, since, until, crashes, groups, unmatched, summary, timeouts)
+        write_report(args.out, args.bundle_id, since, until, crashes, groups, unmatched, summary, timeouts, target_device, target_app)
     finally:
         shutil.rmtree(pulled, ignore_errors=True)
+    crash_count = sum(1 for crash in crashes if crash["kind"] == "crash")
+    jetsam_count = sum(1 for crash in crashes if crash["kind"] == "jetsam")
+    counted = []
+    if isinstance(summary, dict):
+        for kind in CRASH_KINDS:
+            value = summary.get(kind, 0)
+            counted.append(value if isinstance(value, int) else 0)
+    runner_exits = sum(counted)
+    raw_timeouts = summary.get("action_timeout", 0) if isinstance(summary, dict) else 0
+    action_timeouts = raw_timeouts if isinstance(raw_timeouts, int) else 0
     print("crash collect crash %d jetsam %d signatures %d runner_exits %d timeouts %d" % (
-        data["crash_count"], data["jetsam_count"], len(groups), sum(summary.get(kind, 0) for kind in CRASH_KINDS), summary.get("action_timeout", 0)))
-    for entry in data["groups"]:
-        top = entry["signature"].split(" | ", 1)[-1]
-        print("  %dx %s | %s" % (entry["count"], entry["type"], top))
+        crash_count, jetsam_count, len(groups), runner_exits, action_timeouts))
+    for items in groups:
+        head = items[0] if items else {}
+        stack_text = head.get("signature") if isinstance(head, dict) else ""
+        label = head.get("type") if isinstance(head, dict) else ""
+        top = stack_text.split(" | ", 1)[-1] if isinstance(stack_text, str) else ""
+        print("  %dx %s | %s" % (len(items), label if isinstance(label, str) else "", top))
     print("crash report written %s" % os.path.join(args.out, "crash-report.md"))
     return 0
 

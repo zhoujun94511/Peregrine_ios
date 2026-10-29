@@ -15,6 +15,13 @@ static const NSTimeInterval PGReuseSaveInterval = 600;
 @property (nonatomic, strong) PGCycleGuard *cycles;
 @property (nonatomic, strong) PGReuseModel *reuse;
 @property (nonatomic, strong) NSDate *lastReuseSave;
+// Named controls of the screen currently feeding the cycle window.
+@property (nonatomic, copy, nullable) NSSet<NSString *> *controlAnchor;
+@property (nonatomic, copy, nullable) NSString *controlSignature;
+// Cycle keys are control signatures (c:…) when a screen has enough named controls, while graph
+// edges are stored under activity:hash. Avoid has to ban actions on the graph keys seen for
+// those cycle keys, not on the signature itself.
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSMutableSet<NSString *> *> *graphKeysByCycle;
 @end
 
 @implementation PGModel
@@ -29,6 +36,7 @@ static const NSTimeInterval PGReuseSaveInterval = 600;
         _restartMeter = 101;
         _seenActivities = [NSMutableSet set];
         _cycles = [[PGCycleGuard alloc] init];
+        _graphKeysByCycle = [NSMutableDictionary dictionary];
         _reuse = [[PGReuseModel alloc] init];
         _selector.reuseModel = _reuse;
     }
@@ -76,7 +84,19 @@ static const NSTimeInterval PGReuseSaveInterval = 600;
         [self.reuse noteAction:self.previousActionID reachedActivity:page];
     }
     [self saveReuseIfDue];
-    PGCycleEscape escape = [self.cycles noteStateKey:state.key created:created];
+    NSSet<NSString *> *keptControls = nil;
+    NSString *controlSignature = [PGBlockRecovery controlSignatureForKeys:[PGBlockRecovery controlKeysInNodes:nodes] anchor:self.controlAnchor keptKeys:&keptControls];
+    NSString *previousControls = self.controlSignature;
+    BOOL sameControls = controlSignature.length > 0 && [controlSignature isEqualToString:previousControls];
+    self.controlAnchor = keptControls;
+    self.controlSignature = controlSignature.length > 0 ? controlSignature : nil;
+    NSString *cycleKey = controlSignature.length > 0 ? controlSignature : state.key;
+    // A new tree frame of the same named controls is still this screen. A different control set
+    // starts the window over. Screens without enough names keep the tree key.
+    BOOL enteredPage = controlSignature.length > 0 ? (previousControls.length > 0 && !sameControls) : created;
+    [self rememberGraphKey:state.key forCycleKey:cycleKey];
+    PGCycleEscape escape = [self.cycles noteStateKey:cycleKey created:enteredPage];
+    [self forgetGraphKeysOutside:[NSSet setWithArray:self.cycles.recentStateKeys]];
     if(escape == PGCycleEscapeRestart && self.skipRestart)
     {
         escape = PGCycleEscapeBack;
@@ -111,7 +131,7 @@ static const NSTimeInterval PGReuseSaveInterval = 600;
     }
     else if(escape == PGCycleEscapeAvoid)
     {
-        NSSet<NSString *> *banned = [self.graph actionIDsTouchingStateKeys:[NSSet setWithArray:self.cycles.recentStateKeys]];
+        NSSet<NSString *> *banned = [self.graph actionIDsTouchingStateKeys:[self graphKeysForCycleKeys:self.cycles.recentStateKeys]];
         operate = [self.selector operateForNodes:nodes activity:page reward:reward avoiding:banned forceRandom:YES];
     }
     else
@@ -125,6 +145,50 @@ static const NSTimeInterval PGReuseSaveInterval = 600;
     self.previousState = state;
     self.previousActionID = operate.actionID;
     return operate;
+}
+
+- (void)rememberGraphKey:(NSString *)graphKey forCycleKey:(NSString *)cycleKey
+{
+    if(cycleKey.length == 0 || graphKey.length == 0)
+    {
+        return;
+    }
+    NSMutableSet<NSString *> *keys = self.graphKeysByCycle[cycleKey];
+    if(keys == nil)
+    {
+        keys = [NSMutableSet set];
+        self.graphKeysByCycle[cycleKey] = keys;
+    }
+    [keys addObject:graphKey];
+}
+
+- (void)forgetGraphKeysOutside:(NSSet<NSString *> *)liveCycleKeys
+{
+    for(NSString *cycleKey in self.graphKeysByCycle.allKeys)
+    {
+        if(![liveCycleKeys containsObject:cycleKey])
+        {
+            [self.graphKeysByCycle removeObjectForKey:cycleKey];
+        }
+    }
+}
+
+- (NSSet<NSString *> *)graphKeysForCycleKeys:(NSArray<NSString *> *)cycleKeys
+{
+    NSMutableSet<NSString *> *graphKeys = [NSMutableSet set];
+    for(NSString *cycleKey in cycleKeys)
+    {
+        NSSet<NSString *> *mapped = self.graphKeysByCycle[cycleKey];
+        if(mapped.count > 0)
+        {
+            [graphKeys unionSet:mapped];
+        }
+        else if(cycleKey.length > 0)
+        {
+            [graphKeys addObject:cycleKey];
+        }
+    }
+    return graphKeys;
 }
 
 - (PGOperate *)escapeOperate:(PGCycleEscape)escape nodes:(NSArray<PGElementNode *> *)nodes activity:(NSString *)activity

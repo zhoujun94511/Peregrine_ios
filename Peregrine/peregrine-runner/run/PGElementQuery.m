@@ -65,6 +65,7 @@
 
 // Resolving query[identifier] or query.element with more than one match records an
 // XCTest failure that @try cannot undo, so candidates are always bound by index.
+// Reading frame of a vanished candidate does the same, so each frame comes from snapshotWithError:.
 + (XCUIElement *)elementIn:(XCUIElementQuery *)query nearestRect:(PGElementRect)rect
 {
     NSArray<XCUIElement *> *candidates = query.allElementsBoundByIndex;
@@ -81,7 +82,14 @@
     CGFloat bestArea = 0;
     for(XCUIElement *candidate in candidates)
     {
-        CGRect overlap = CGRectIntersection(candidate.frame, target);
+        NSError *error = nil;
+        id<XCUIElementSnapshot> snapshot = [candidate snapshotWithError:&error];
+        CGRect found = snapshot == nil ? CGRectZero : snapshot.frame;
+        if(found.size.width <= 0 || found.size.height <= 0)
+        {
+            continue;
+        }
+        CGRect overlap = CGRectIntersection(found, target);
         CGFloat area = CGRectIsNull(overlap) ? 0 : overlap.size.width * overlap.size.height;
         if(best == nil || area > bestArea)
         {

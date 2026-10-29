@@ -103,13 +103,14 @@ static int PGConnectLoopback(uint16_t port)
         NSLog(@"stub %@ port %ld", report.stub.boolValue ? @"success" : @"failed", (long)session.dataPort);
     }
     report.internetRequired = [self internetRequiredInEnvironment:environment];
+    NSString *probeURL = [PGEnvironment stringForKey:@"PEREGRINE_NETWORK_PROBE_URL" inEnvironment:environment];
     if(report.internetRequired)
     {
-        report.internet = [PGNetworkProbe probeNetwork] ? PGInternetStatusReachable : ([PGNetworkProbe pathDenied] ? PGInternetStatusDenied : PGInternetStatusUnreachable);
+        report.internet = [PGNetworkProbe probeNetworkWithURL:probeURL] ? PGInternetStatusReachable : ([PGNetworkProbe pathDenied] ? PGInternetStatusDenied : PGInternetStatusUnreachable);
     }
     else
     {
-        report.internet = [self quickInternetStatus];
+        report.internet = [self quickInternetStatusWithURL:probeURL];
     }
     if(report.internet == PGInternetStatusReachable)
     {
@@ -264,14 +265,14 @@ static int PGConnectLoopback(uint16_t port)
 }
 
 // One request without the permission-dialog loop: a denied path is reported, not waited out.
-+ (PGInternetStatus)quickInternetStatus
++ (PGInternetStatus)quickInternetStatusWithURL:(NSString *)urlString
 {
     if([PGNetworkProbe pathDenied])
     {
         return PGInternetStatusDenied;
     }
     NSString *failure = nil;
-    if([PGNetworkProbe requestPing:&failure])
+    if([PGNetworkProbe requestPingURL:urlString failure:&failure])
     {
         return PGInternetStatusReachable;
     }

@@ -16,7 +16,7 @@ typedef NS_ENUM(NSInteger, PGStubTreeVerdict) {
 // 4-second probe, which covers the stub's 2-second start after an app restart.
 // After 5 empty trees in a row another probe runs; if it fails, the stub is lost.
 // At launch the stub must report the app under test through app_info; a stub that
-// reports another bundle is not used. A stub without app_info is trusted.
+// reports another bundle or cannot provide app_info is not used.
 @interface PGStubWatch : NSObject
 @property (nonatomic, readonly) BOOL alive;
 - (instancetype)initWithClient:(PGStubClient *)client port:(NSInteger)port bundleID:(NSString *)bundleID;

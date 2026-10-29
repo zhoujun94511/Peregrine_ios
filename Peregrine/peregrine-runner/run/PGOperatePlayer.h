@@ -5,10 +5,17 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(NSInteger, PGOperateResult) {
+    PGOperateResultSuccess = 0,
+    PGOperateResultTargetNotFound,
+    PGOperateResultExecutionFailed,
+    PGOperateResultSkipped,
+};
+
 // Performs one operate and writes its action events.
 @interface PGOperatePlayer : NSObject
 + (BOOL)openURL:(NSURL *)url application:(XCUIApplication *)application;
-+ (void)traceOperate:(PGOperate *)operate
++ (PGOperateResult)traceOperate:(PGOperate *)operate
                nodes:(NSArray<PGElementNode *> *)nodes
                inApp:(XCUIApplication *)application
                cases:(PGCaseSchedule *)cases
